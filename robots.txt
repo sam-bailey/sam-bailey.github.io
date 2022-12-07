@@ -1,1 +1,1 @@
-Sitemap: https://sam-bailey.github.io/sitemap.xml
+Sitemap: https://github.com/sam-bailey/sam-bailey.github.io/sitemap.xml
