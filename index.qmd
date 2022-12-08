@@ -1,12 +1,14 @@
 ---
-title: "sam-bailey.github.io"
+title: "Posts"
+subtitle: "A collection of notes on data science"
 listing:
   contents: posts
   sort: "date desc"
-  type: default
+  type: grid
   categories: true
   sort-ui: false
   filter-ui: false
+  fields: ["title", "image", "date", "description", "reading-time", "categories"]
 page-layout: full
 title-block-banner: true
 ---

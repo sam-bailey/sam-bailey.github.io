@@ -1,9 +1,8 @@
 ---
-title: "Post With Code"
-author: "Harlow Malloc"
+title: "Post With Python Code"
 date: "2022-12-08"
-categories: [news, code, analysis]
-image: "image.jpg"
+categories: [Python]
+image: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png
 jupyter: python3
 ---
 
@@ -17,3 +16,11 @@ x = np.linspace(0.0,3.0,100)
 y = np.sin(x)
 plt.plot(x, y)
 ```
+
+# Next Section
+
+Hello
+
+## Subheading
+
+More stuff
