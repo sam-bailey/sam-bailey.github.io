@@ -4,6 +4,8 @@ project:
 website:
   title: "Sam's Data Stuff"
   navbar:
+    background: light
+    foreground: dark
     right:
       - about.qmd
       - icon: github
@@ -17,4 +19,4 @@ format:
 
 execute:
   freeze: auto
-
+    
