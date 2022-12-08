@@ -9,9 +9,16 @@
   {
     "objectID": "posts/post-with-code/index.html",
     "href": "posts/post-with-code/index.html",
-    "title": "Post With Code",
+    "title": "Post With Python Code",
     "section": "",
-    "text": "This is a post with executable code. Let’s try some python.\n\nimport numpy as np\nimport pylab as plt\n\nx = np.linspace(0.0,3.0,100)\ny = np.sin(x)\nplt.plot(x, y)"
+    "text": "This is a post with executable code. Let’s try some python."
+  },
+  {
+    "objectID": "posts/post-with-code/index.html#subheading",
+    "href": "posts/post-with-code/index.html#subheading",
+    "title": "Post With Python Code",
+    "section": "Subheading",
+    "text": "Subheading\nMore stuff"
   },
   {
     "objectID": "posts/welcome/index.html",
@@ -23,8 +30,8 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "sam-bailey.github.io",
+    "title": "Posts",
     "section": "",
-    "text": "Post With Code\n\n\n\n\n\n\n\nnews\n\n\ncode\n\n\nanalysis\n\n\n\n\n\n\n\n\n\n\n\nDec 8, 2022\n\n\nHarlow Malloc\n\n\n\n\n\n\n  \n\n\n\n\nWelcome To My Blog\n\n\n\n\n\n\n\nnews\n\n\n\n\n\n\n\n\n\n\n\nDec 5, 2022\n\n\nTristan O’Malley\n\n\n\n\n\n\nNo matching items"
+    "text": "Post With Python Code\n\n\n0 min\n\n\n\nPython\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n0 min\n\n\n\n\n\n\nDec 5, 2022\n\n\n\n\n\n\n\n\nNo matching items"
   }
 ]
