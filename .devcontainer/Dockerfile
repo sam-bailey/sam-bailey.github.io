@@ -9,6 +9,16 @@ ARG INSTALL_NODE="true"
 ARG NODE_VERSION="lts/*"
 RUN if [ "${INSTALL_NODE}" = "true" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
 
+# Install some standard python requirements for my workflow
+RUN python3 -m pip install jupyter virtualenv ipykernel
+
+# Install Julia and set up jupyter kernel
+RUN pip install jill
+RUN jill install --confirm
+RUN export PATH=$PATH:/usr/local/bin
+RUN julia -e 'using Pkg; Pkg.add("IJulia")'
+
+# Install quarto for creating the website from jupyter notebooks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pandoc \
     pandoc-citeproc \
@@ -18,7 +28,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb
 RUN gdebi --non-interactive quarto-linux-amd64.deb
-RUN python3 -m pip install jupyter
 
 # [Optional] If your pip requirements rarely change, uncomment this section to add them to the image.
 # COPY requirements.txt /tmp/pip-tmp/

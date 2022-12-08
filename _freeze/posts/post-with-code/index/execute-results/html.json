@@ -1,5 +1,5 @@
 {
-  "hash": "6834cfc865964a01056d571e27e146d2",
+  "hash": "504b5667c4e927c4986f48af337f196f",
   "result": {
     "markdown": "---\ntitle: Post With Python Code\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png\n---\n\nThis is a post with executable code. Let's try some python.\n\n::: {.cell execution_count=1}\n``` {.python .cell-code}\nimport numpy as np\nimport pylab as plt\n\nx = np.linspace(0.0,3.0,100)\ny = np.sin(x)\nplt.plot(x, y)\n```\n\n::: {.cell-output .cell-output-display}\n![](index_files/figure-html/cell-2-output-1.png){width=571 height=411}\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\nMore stuff\n\n",
     "supporting": [

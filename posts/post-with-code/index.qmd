@@ -3,7 +3,7 @@ title: "Post With Python Code"
 date: "2022-12-08"
 categories: [Python]
 image: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png
-jupyter: python3
+jupyter: "python3"
 ---
 
 This is a post with executable code. Let's try some python.
