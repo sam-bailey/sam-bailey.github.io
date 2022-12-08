@@ -11,7 +11,7 @@
     "href": "posts/post-with-code/index.html",
     "title": "Post With Code",
     "section": "",
-    "text": "This is a post with executable code."
+    "text": "This is a post with executable code. Let’s try some python.\n\nimport numpy as np\nimport pylab as plt\n\nx = np.linspace(0.0,3.0,100)\ny = np.sin(x)\nplt.plot(x, y)"
   },
   {
     "objectID": "posts/welcome/index.html",
