@@ -4,6 +4,16 @@ author: "Harlow Malloc"
 date: "2022-12-08"
 categories: [news, code, analysis]
 image: "image.jpg"
+jupyter: python3
 ---
 
-This is a post with executable code.
+This is a post with executable code. Let's try some python.
+
+```{python}
+import numpy as np
+import pylab as plt
+
+x = np.linspace(0.0,3.0,100)
+y = np.sin(x)
+plt.plot(x, y)
+```
