@@ -28,10 +28,17 @@
     "text": "This is the first post in a Quarto blog. Welcome!\n\nSince this post doesn’t specify an explicit image, the first image in the post will be used in the listing page of posts."
   },
   {
+    "objectID": "posts/julia-post/index.html",
+    "href": "posts/julia-post/index.html",
+    "title": "Post With Julia Code",
+    "section": "",
+    "text": "Now lets try some julia code…\n\nusing Plots\n\nplot(sin, \n     x->sin(2x), \n     0, \n     2π, \n     leg=false, \n     fill=(0,:lavender))\n\n\n\n\n\nprintln(20.0)\n\n20.0"
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "Posts",
     "section": "",
-    "text": "Post With Python Code\n\n\n0 min\n\n\n\nPython\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n0 min\n\n\n\n\n\n\nDec 5, 2022\n\n\n\n\n\n\n\n\nNo matching items"
+    "text": "Post With Python Code\n\n\n0 min\n\n\n\nPython\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Julia Code\n\n\n0 min\n\n\n\nJulia\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n0 min\n\n\n\n\n\n\nDec 5, 2022\n\n\n\n\n\n\n\n\nNo matching items"
   }
 ]
