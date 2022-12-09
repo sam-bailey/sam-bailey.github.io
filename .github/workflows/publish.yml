@@ -25,6 +25,9 @@ jobs:
         with:
           version: 1.8
 
+      - name: Install IJulia
+        run: julia -e 'using Pkg; Pkg.add("IJulia")'
+
       - name: Check kernels
         run: jupyter kernelspec list
 
