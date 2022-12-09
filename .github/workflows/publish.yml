@@ -19,9 +19,6 @@ jobs:
         with:
           version: 1.8
 
-      - name: Setup IJulia
-        run: julia -e 'using Pkg; Pkg.add("IJulia")'
-
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 

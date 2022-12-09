@@ -1,6 +1,8 @@
 project:
   type: website
-  pre-render: preprocess_pip.py
+  pre-render: 
+    - preprocess_pip.py
+    - sh julia_install.sh
 
 website:
   title: "Sam Bailey | Data Science"

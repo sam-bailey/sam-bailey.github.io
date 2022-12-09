@@ -1,7 +1,7 @@
 {
-  "hash": "baee8325943f86b7cd117e3cb7071138",
+  "hash": "1ab0f9e6e47f76dfa9fa74729efd7885",
   "result": {
-    "markdown": "---\ntitle: Post With Julia Code\ndate: '2022-12-08'\ncategories:\n  - Julia\n---\n\n## Julia basic example\n\n\n\nNow lets try some julia code...\n\n::: {.cell execution_count=2}\n``` {.julia .cell-code}\nusing Plots\n\nplot(sin, \n     x->sin(2x), \n     0, \n     2π, \n     leg=false, \n     fill=(0,:lavender))\n```\n\n::: {.cell-output .cell-output-display execution_count=12}\n![](index_files/figure-html/cell-3-output-1.svg){}\n:::\n:::\n\n\n::: {.cell execution_count=3}\n``` {.julia .cell-code}\nprintln(20.0)\n```\n\n::: {.cell-output .cell-output-stdout}\n```\n20.0\n```\n:::\n:::\n\n\n",
+    "markdown": "---\ntitle: Post With Julia Code\ndate: '2022-12-08'\ncategories:\n  - Julia\nimage: ../../_freeze/posts/julia-post/index/figure-html/cell-3-output-1.svg\n---\n\n## Julia basic example\n\n\n\nNow lets try some julia code...\n\n::: {.cell execution_count=2}\n``` {.julia .cell-code}\nusing Plots\n\nplot(sin, \n     x->sin(2x), \n     0, \n     2π, \n     leg=false, \n     fill=(0,:lavender))\n```\n\n::: {.cell-output .cell-output-display execution_count=4}\n![](index_files/figure-html/cell-3-output-1.svg){}\n:::\n:::\n\n\n::: {.cell execution_count=3}\n``` {.julia .cell-code}\nprintln(20.0)\n```\n\n::: {.cell-output .cell-output-stdout}\n```\n20.0\n```\n:::\n:::\n\n\n",
     "supporting": [
       "index_files"
     ],
