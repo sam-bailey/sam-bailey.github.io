@@ -19,6 +19,9 @@ jobs:
         with:
           version: 1.8
 
+      - name: Check kernels
+        run: jupyter kernelspec list
+
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
