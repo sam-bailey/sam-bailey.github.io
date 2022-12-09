@@ -9,6 +9,7 @@ jupyter: "python3"
 This is a post with executable code. Let's try some python.
 
 ```{python}
+
 import numpy as np
 import pylab as plt
 
