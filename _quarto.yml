@@ -5,6 +5,7 @@ project:
 website:
   title: "Sam Bailey | Data Science"
   repo-url: https://github.com/sam-bailey/sam-bailey.github.io
+  repo-branch: master
   navbar:
     title: Sam Bailey | Data Science
     background: info
@@ -23,4 +24,3 @@ format:
 
 execute:
   freeze: auto
-    
