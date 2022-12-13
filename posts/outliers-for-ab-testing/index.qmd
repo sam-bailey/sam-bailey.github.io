@@ -1,0 +1,110 @@
+---
+title: "Trimming Outliers for A/B Testing"
+date: "2022-12-08"
+categories: [Julia]
+image: ../../_freeze/posts/outliers-for-ab-testing/index/figure-html/cell-3-output-1.svg
+jupyter: "julia-1.8"
+---
+
+```{julia}
+#| echo: false
+#| output: false
+
+using Pkg
+Pkg.add([
+     "Plots",
+     "Random",
+     "Distributions",
+     "Optim",
+     "BenchmarkTools"
+])
+
+using Random, Distributions, Optim, BenchmarkTools
+using Plots
+
+Random.seed!(123);
+```
+
+In a lot of situations we have 1-D data which is skewed, and we want to remove the outliers on the right. This happens a lot when running experiments with continuous variables like revenue, where you can have a few data points which are very high revenue and hurt your variance a lot. Removing these outliers improves your variance a lot.
+
+## Generate toy dataset
+
+To test these methods, I need some synthetic data. I'll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won't work.
+
+```{julia}
+data_dist = MixtureModel(
+	[
+	   LogNormal(2.0, 0.5),
+	   Pareto(1.8,15)
+	], 
+	[0.98, 0.02]
+);
+
+x_samples = rand(data_dist, 1000);
+
+x = LinRange(0.001,40,300)
+y = pdf.(data_dist, x)
+
+histogram(
+     x_samples, 
+     normalize=true, 
+     # bins = x, 
+     label="Samples" 
+)
+plot!(x,y,label="PDF", lw=3)
+```
+
+## Outlier Detection
+
+Now we want to try to identify the outliers that came from the pareto distributon. I'll try to do this by modelling the data as:
+
+1. A KDE density estimation. This is for the bulk data, and is non-parametric so it should work on any dataset. I need to choose a kernel, for this data I'll choose lognormal.
+2. A generalized pareto distribution. This should model the outliers.
+
+```{julia}
+function kde(samples::Vector{Float64}, bandwidth::Float64, x::Float64, weights::Vector{Float64})
+	sum(weights .* pdf.(Normal.(log.(samples), bandwidth), log(x))) / (sum(weights) * x)
+end
+
+function kde_loo(log_samples::Vector{Float64}, bandwidth::Float64, i::Int, weights::Vector{Float64})
+	sum(weights[1:end .!= i] .* pdf.(Normal.(log_samples[1:end .!= i], bandwidth), log_samples[i])) / sum(weights)
+end
+
+function kde_logloss(
+	samples::Vector{Float64},
+	bandwidth::Float64,
+	weights::Vector{Float64}
+)
+	log_samples = log.(samples)
+	kde_est = kde_loo.(Ref(log_samples), bandwidth, 1:length(samples), Ref(weights))
+	return -1 * sum(weights .* log.(kde_est)) / sum(weights)
+end
+
+function fit_kde(samples::Vector{Float64}, weights::Vector{Float64})
+	f(log_bw_i) = kde_logloss(samples, exp(log_bw_i[1]), weights);
+	initial_x = [10.0];
+	exp(Optim.minimizer(optimize(f, initial_x))[1])
+end
+
+function fit_kde(samples::Vector{Float64})
+	fit_kde(samples, ones(length(samples)))
+end
+
+x_bandwidth = exp10.(LinRange(-2, 2, 100))
+y_bandwidth = kde_logloss.(Ref(x_samples), x_bandwidth, Ref(ones(length(x_samples))))
+plot(x_bandwidth, y_bandwidth, xscale=:log10)
+```
+
+```{julia}
+bw = fit_kde(x_samples)
+y_kde = kde.(Ref(x_samples), bw, x, Ref(ones(length(x_samples))))
+
+histogram(
+     x_samples, 
+     normalize=true, 
+     bins = x, 
+     label="Samples" 
+)
+plot!(x,y,label="PDF", lw=3)
+plot!(x,y_kde,label="KDE", lw=3)
+```

@@ -5,8 +5,20 @@
 freeze: true
 
 # Enable banner style title blocks
-title-block-banner: true
+title-block-banner: false
 
 comments:
   utterances:
     repo: sam-bailey/blogComments
+
+format:
+  html:
+    code-fold: true
+    code-tools:
+      source: repo
+    toc: true
+    toc-location: left
+    toc-title: Contents
+
+execute:
+  echo: false

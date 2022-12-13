@@ -1,0 +1,11 @@
+{
+  "hash": "4a3c2816e605af7adb86a44ccd0667e4",
+  "result": {
+    "markdown": "---\ntitle: Trimming Outliers for A/B Testing\ndate: '2022-12-08'\ncategories:\n  - Julia\nimage: ../../_freeze/posts/outliers-for-ab-testing/index/figure-html/cell-3-output-1.svg\n---\n\n\n\nIn a lot of situations we have 1-D data which is skewed, and we want to remove the outliers on the right. This happens a lot when running experiments with continuous variables like revenue, where you can have a few data points which are very high revenue and hurt your variance a lot. Removing these outliers improves your variance a lot.\n\n## Generate toy dataset\n\nTo test these methods, I need some synthetic data. I'll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won't work.\n\n::: {.cell execution_count=2}\n\n::: {.cell-output .cell-output-display execution_count=3}\n![](index_files/figure-html/cell-3-output-1.svg){}\n:::\n:::\n\n\n## Outlier Detection\n\nNow we want to try to identify the outliers that came from the pareto distributon. I'll try to do this by modelling the data as:\n\n1. A KDE density estimation. This is for the bulk data, and is non-parametric so it should work on any dataset. I need to choose a kernel, for this data I'll choose lognormal.\n2. A generalized pareto distribution. This should model the outliers.\n\n::: {.cell execution_count=3}\n\n::: {.cell-output .cell-output-display execution_count=4}\n![](index_files/figure-html/cell-4-output-1.svg){}\n:::\n:::\n\n\n::: {.cell execution_count=4}\n\n::: {.cell-output .cell-output-display execution_count=5}\n![](index_files/figure-html/cell-5-output-1.svg){}\n:::\n:::\n\n\n",
+    "supporting": [
+      "index_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}
