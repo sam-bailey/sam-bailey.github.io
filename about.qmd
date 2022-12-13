@@ -10,7 +10,17 @@ about:
     - icon: github
       text: Github
       href: https://github.com/sam-bailey
-
+format:
+  html: 
+    footnotes-hover: true
+    reference-location: section
+ 
 ---
 
-About this blog
+Hi there! I'm Sam Bailey, and I'm a Principal Data Scientist at [Booking.com](https://www.booking.com). My day job involves a lot of python, statistics, and randomised controlled trials.
+
+But in my free time, I like to explore new topics that catch my interest. That usually involves writing some [python](https://www.python.org/) or [julia](https://julialang.org/), whether it's coding something from scratch or just testing out a new library.
+
+At the end of the day, I try to put my thoughts into words and share them on this blog. I hope you find my musings interesting and maybe even useful! Thanks for stopping by.
+
+<sub><sup>This text was edited by [ChatGPT](https://chat.openai.com), with the prompt "Make this sound like a light hearted, 'about me' section of a blog".</sup></sub>
