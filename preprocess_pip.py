@@ -3,26 +3,29 @@ import sys
 import os
 import pathlib
 
-
-def is_render_all():
-    """
-    Returns true if quarto is set to render all
-    """
-    return os.getenv("QUARTO_PROJECT_RENDER_ALL")
+IS_RENDER_ALL = os.getenv("QUARTO_PROJECT_RENDER_ALL")
+PROJECT_FILES_STR = os.getenv("QUARTO_PROJECT_INPUT_FILES")
 
 
 def get_project_files():
     """
     Get all the project files being rendered as a list of paths
     """
-    return list(map(pathlib.Path, os.getenv("QUARTO_PROJECT_INPUT_FILES").split("\n")))
+    return list(map(pathlib.Path, PROJECT_FILES_STR.split("\n")))
 
 
 def get_requiements_path(project_file):
+    """
+    Return the path to a requirements.txt for the file. 
+    It's in the same directory and named requirements.txt.
+    """
     return project_file.parent / "requirements.txt"
 
 
 def file_exists(project_file):
+    """
+    Check if the file exists
+    """
     return project_file.exists()
 
 
@@ -34,7 +37,7 @@ def install(path):
 
 
 if __name__ == "__main__":
-    if is_render_all():
+    if IS_RENDER_ALL:
         print("Not rendering a specific .qmd file, so will not install requirements. Exiting.")
         sys.exit()
     
