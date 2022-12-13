@@ -4,25 +4,53 @@ import os
 import pathlib
 
 
-def project_files():
+def is_render_all():
     """
-    Get all the project files as path objects
+    Returns true if quarto is set to render all
     """
-    for f in os.getenv("QUARTO_PROJECT_INPUT_FILES").split("\n"):
-        yield pathlib.Path(f)
+    return os.getenv("QUARTO_PROJECT_RENDER_ALL")
 
 
-def install(requirements_path):
+def get_project_files():
+    """
+    Get all the project files being rendered as a list of paths
+    """
+    return list(map(pathlib.Path, os.getenv("QUARTO_PROJECT_INPUT_FILES").split("\n")))
+
+
+def get_requiements_path(project_file):
+    return project_file.parent / "requirements.txt"
+
+
+def file_exists(project_file):
+    return project_file.exists()
+
+
+def install(path):
     """
     Install all requirements at the path
     """
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_path])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", path])
 
 
 if __name__ == "__main__":
-    for path in project_files():
-        requirements_path = path.parent / "requirements.txt"
-        if requirements_path.exists():
-            install(str(requirements_path))
+    if is_render_all():
+        print("Not rendering a specific .qmd file, so will not install requirements. Exiting.")
+        sys.exit()
+    
+    project_files = get_project_files()
+    all_requirements_files = map(get_requiements_path, project_files)
+    all_existing_requirements_files = filter(file_exists, all_requirements_files)
+    all_existing_requirements_files_str = list(set(map(str, all_existing_requirements_files)))
 
-    sys.exit()
+    if len(all_existing_requirements_files_str) == 0:
+        print("No python requirements to be installed. Exiting.")
+        sys.exit()
+
+    if len(all_existing_requirements_files_str) > 1:
+        print("Multiple python requirements to be installed. Might cause conflicts. Exiting.")
+        sys.exit()
+
+    requirements_path = all_existing_requirements_files_str[0]
+    print(f"Installing requirements from {requirements_path}")
+    install(requirements_path)

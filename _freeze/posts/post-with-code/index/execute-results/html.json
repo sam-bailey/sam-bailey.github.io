@@ -1,7 +1,7 @@
 {
-  "hash": "18ba4eb803d6023f4850a207bbdf689b",
+  "hash": "7513a33a109591b52638efee48146087",
   "result": {
-    "markdown": "---\ntitle: Post With Python Code\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png\n---\n\nThis is a post with executable code. Let's try some python.\n\n::: {.cell execution_count=1}\n``` {.python .cell-code}\nimport numpy as np\nimport pylab as plt\n\nx = np.linspace(0.0,3.0,100)\ny = np.sin(x)\nplt.plot(x, y)\n```\n\n::: {.cell-output .cell-output-display}\n![](index_files/figure-html/cell-2-output-1.png){width=571 height=411}\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\nMore stuff\n\n",
+    "markdown": "---\ntitle: Post With Python Code\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png\n---\n\nThis is a post with executable code. Let's try some python.\n\n::: {.cell execution_count=1}\n``` {.python .cell-code}\nimport numpy as np\nimport pylab as plt\nimport pandas as pd\n\nx = np.linspace(0.0,3.0,100)\ny = np.sin(x)\nplt.plot(x, y)\n```\n\n::: {.cell-output .cell-output-display}\n![](index_files/figure-html/cell-2-output-1.png){width=571 height=411}\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\nMore stuff\n\n",
     "supporting": [
       "index_files"
     ],

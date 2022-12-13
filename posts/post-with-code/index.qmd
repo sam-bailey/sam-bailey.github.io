@@ -12,6 +12,7 @@ This is a post with executable code. Let's try some python.
 
 import numpy as np
 import pylab as plt
+import pandas as pd
 
 x = np.linspace(0.0,3.0,100)
 y = np.sin(x)
