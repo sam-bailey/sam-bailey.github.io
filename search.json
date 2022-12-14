@@ -54,5 +54,12 @@
     "title": "Posts",
     "section": "",
     "text": "Trimming Outliers for A/B Testing\n\n\n1 min\n\n\n\nJulia\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Python Code\n\n\n0 min\n\n\n\nPython\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n0 min\n\n\n\n\n\n\nDec 5, 2022\n\n\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "publications.html",
+    "href": "publications.html",
+    "title": "Publications",
+    "section": "",
+    "text": "Expand To Learn About Collapse\n\n\n\n\n\nThis is an example of a ‘folded’ caution callout that can be expanded by the user. You can use collapse=\"true\" to collapse it by default or collapse=\"false\" to make a collapsible callout that is expanded by default."
   }
 ]

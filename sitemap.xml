@@ -2,22 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://github.com/sam-bailey/sam-bailey.github.io/about.html</loc>
-    <lastmod>2022-12-13T23:15:44.805Z</lastmod>
+    <lastmod>2022-12-14T00:17:25.784Z</lastmod>
   </url>
   <url>
     <loc>https://github.com/sam-bailey/sam-bailey.github.io/posts/outliers-for-ab-testing/index.html</loc>
-    <lastmod>2022-12-13T23:15:46.169Z</lastmod>
+    <lastmod>2022-12-14T00:17:26.840Z</lastmod>
   </url>
   <url>
     <loc>https://github.com/sam-bailey/sam-bailey.github.io/posts/post-with-code/index.html</loc>
-    <lastmod>2022-12-13T23:15:47.037Z</lastmod>
+    <lastmod>2022-12-14T00:17:27.524Z</lastmod>
   </url>
   <url>
     <loc>https://github.com/sam-bailey/sam-bailey.github.io/posts/welcome/index.html</loc>
-    <lastmod>2022-12-13T23:15:47.453Z</lastmod>
+    <lastmod>2022-12-14T00:17:27.816Z</lastmod>
   </url>
   <url>
     <loc>https://github.com/sam-bailey/sam-bailey.github.io/index.html</loc>
-    <lastmod>2022-12-13T23:15:47.893Z</lastmod>
+    <lastmod>2022-12-14T00:17:28.144Z</lastmod>
+  </url>
+  <url>
+    <loc>https://github.com/sam-bailey/sam-bailey.github.io/publications.html</loc>
+    <lastmod>2022-12-14T00:17:28.420Z</lastmod>
   </url>
 </urlset>
