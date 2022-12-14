@@ -12,6 +12,7 @@ website:
     foreground: light
     right:
       - index.qmd
+      - publications.qmd
       - about.qmd
       - icon: github
         href: https://github.com/sam-bailey
@@ -21,6 +22,8 @@ format:
   html:
     theme: journal
     css: styles.css
+    smooth-scroll: true
+    link-external-newwindow: true
 
 execute:
   freeze: auto

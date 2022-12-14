@@ -1,0 +1,12 @@
+---
+title: "Publications"
+subtitle: "My publications on other platforms"
+page-layout: full
+title-block-banner: true
+---
+
+::: {.callout-note collapse="true" appearance="default"}
+## Expand To Learn About Collapse
+
+This is an example of a 'folded' caution callout that can be expanded by the user. You can use `collapse="true"` to collapse it by default or `collapse="false"` to make a collapsible callout that is expanded by default.
+:::
