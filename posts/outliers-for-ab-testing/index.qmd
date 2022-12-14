@@ -4,6 +4,7 @@ date: "2022-12-08"
 categories: [Julia]
 image: ../../_freeze/posts/outliers-for-ab-testing/index/figure-html/cell-3-output-1.svg
 jupyter: "julia-1.8"
+bibliography: references.bib
 ---
 
 ```{julia}
@@ -16,14 +17,123 @@ Pkg.add([
      "Random",
      "Distributions",
      "Optim",
-     "BenchmarkTools"
+	 "StatsBase"
 ])
 
-using Random, Distributions, Optim, BenchmarkTools
+using Random, Distributions, Optim, StatsBase
 using Plots
 
 Random.seed!(123);
 ```
+
+* Running A/B tests targeting continuous metrics like revenue per visitor are important for companies to evaluate the financial impact of their interventions
+* These metrics are often hard from a statistical perspective because they are influenced by outliers, which dramatically hurt experimental power
+* One way to think about these outliers is to say you don't want to optimize your website for a minority of extremely high value customers, since this is high risk. This thinking goes towards the ideas of quantitative finance, and I won't explore this in this post.
+* Another reason could be data issues. Lets assume we rule that out.
+* The second way is to say you want to optimize your website for everyone, so you can't ignore the outliers, but their existance makes standard statistical tests inefficient, so we try to find more efficient estimators that require introducing as little bias as possible.
+* We can formalise this by assuming that the majority of our sample comes from some well behaved population distribution, but a small number of samples are drawn from a population distribution with infinite variance. For example, the Pareto distribution [@powerlaws].
+* This contribution from the infinite variance distribution is a problem, because it causes the mixture distribution to also have infinite variance, and therefore the central limit theorem breaks down. 
+
+
+Method:
+
+The following is inspired by the Pareto Smoothed Importance Sampling paper [@psis]:
+
+1. Set $M = min(0.2 S, 3 \sqrt{S})$
+2. Set $\hat{u} = x_{S-M}$
+3. Estimate $\alpha$ of the tail, using the standard Hill estimator
+4. Set $x'_{S-M+z} = \min{ \left( F^{-1} \left( \frac{z - 1/2}{M} \right), \max_s{(x_s)} \right)}$
+
+Now perform a t-test on $x'$ instead of $x$. 
+
+Hill estimator:
+
+$$
+\alpha = 1 + n \left[\sum_{i=1}^n \ln{ \frac{x_i}{x_\text{min}} } \right]^{-1}
+$$
+
+```{julia}
+data_dist = MixtureModel(
+	[
+	   LogNormal(2.0, 0.5),
+	   GeneralizedPareto(0.0, 5.0, 0.8)
+	], 
+	[0.97, 0.03]
+);
+
+x_samples = rand(data_dist, 1000);
+
+x = LinRange(0.001,40,300)
+y = pdf.(data_dist, x)
+
+histogram(
+     x_samples, 
+     normalize=true, 
+     label="Samples" 
+)
+plot!(x,y,label="PDF", lw=3)
+```
+
+Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?
+
+```{julia}
+
+```
+
+Now I will implement my method
+
+```{julia}
+function get_tail_index(n::Int)
+	trunc(Int, minimum([0.2 * n, 3.0 * sqrt(n)]))
+end
+
+function fit_pareto_tail(x_tail_sorted::Vector{Float64})
+	m = length(x_tail_sorted)
+	θ = x_tail_sorted[1]
+	α = 1.0 + m / (sum(log.(x_tail_sorted)) - m * log(θ))
+
+	return Pareto(α, θ)
+end 
+
+function adjust_tail_value(x::Float64, inverse_rank_x::Int, tail_dist::Pareto{Float64}, max_tail_rank::Int)
+	α, θ = params(tail_dist)
+	if x <= θ
+		return x
+	else
+		return quantile(tail_dist, (max_tail_rank - inverse_rank_x + 0.5) / max_tail_rank)
+	end
+end
+
+function smooth_pareto_tail(x::Vector{Float64})
+	r = ordinalrank(x, rev=true)
+	n = length(x)
+	m = get_tail_index(n)
+
+	x_tail = x[r .<= m]
+	tail_dist = fit_pareto_tail(x_tail)
+
+	y_tail = pdf.(tail_dist, x)
+
+	x_out = adjust_tail_value.(x, r, tail_dist, m)
+
+	return x_out
+end
+
+x_samples_smoothed = smooth_pareto_tail(x_samples)
+# plot(x_samples, x_samples_smoothed, seriestype=:scatter)
+
+# tail_dist = fit_pareto_tail(x_samples)
+# y_tail = pdf.(tail_dist, x)
+
+# histogram(
+#      x_samples, 
+#      normalize=true, 
+#      label="Samples" 
+# )
+# plot!(x,y_tail .* 0.08,label="Tail PDF", lw=3)
+```
+
+# OLD STUFF
 
 In a lot of situations we have 1-D data which is skewed, and we want to remove the outliers on the right. This happens a lot when running experiments with continuous variables like revenue, where you can have a few data points which are very high revenue and hurt your variance a lot. Removing these outliers improves your variance a lot.
 
