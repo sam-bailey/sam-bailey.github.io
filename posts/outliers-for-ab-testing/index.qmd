@@ -77,24 +77,47 @@ plot!(x,y,label="PDF", lw=3)
 Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?
 
 ```{julia}
-
-```
-
-Now I will implement my method
-
-```{julia}
 function get_tail_index(n::Int)
 	trunc(Int, minimum([0.2 * n, 3.0 * sqrt(n)]))
 end
 
 function fit_pareto_tail(x_tail_sorted::Vector{Float64})
 	m = length(x_tail_sorted)
-	θ = x_tail_sorted[1]
+	θ = minimum(x_tail_sorted)
 	α = 1.0 + m / (sum(log.(x_tail_sorted)) - m * log(θ))
+	println(α)
 
 	return Pareto(α, θ)
 end 
 
+function tail_plot(x::Vector{Float64})
+	x_sorted = sort(x)
+	share_above = 1.0 .- (collect(1:length(x)) .- 1) / length(x)
+	plot(x_sorted, share_above, xscale=:log10, yscale=:log10, seriestype=:scatter, label="Samples")
+	plot!(xlabel="X", ylabel="P(x > X)")
+end
+
+function tail_plot(x::Vector{Float64}, tail_dist::Pareto{Float64})
+	tail_plot(x)
+	α, θ = params(tail_dist)
+
+	x_dist = sort(x[x .> θ])
+	y_dist = ccdf(tail_dist, x_dist) .* (length(x_dist) / length(x))
+	plot!(x_dist, y_dist, label="Tail Pareto Fit")
+end
+
+r = ordinalrank(x_samples, rev=true)
+m = get_tail_index(length(x_samples))
+
+x_tail = x_samples[r .<= m]
+tail_dist = fit_pareto_tail(x_tail)
+
+tail_plot(x_samples, tail_dist)
+```
+
+Now I will implement my method
+
+```{julia}
 function adjust_tail_value(x::Float64, inverse_rank_x::Int, tail_dist::Pareto{Float64}, max_tail_rank::Int)
 	α, θ = params(tail_dist)
 	if x <= θ
@@ -120,17 +143,10 @@ function smooth_pareto_tail(x::Vector{Float64})
 end
 
 x_samples_smoothed = smooth_pareto_tail(x_samples)
-# plot(x_samples, x_samples_smoothed, seriestype=:scatter)
-
-# tail_dist = fit_pareto_tail(x_samples)
-# y_tail = pdf.(tail_dist, x)
-
-# histogram(
-#      x_samples, 
-#      normalize=true, 
-#      label="Samples" 
-# )
-# plot!(x,y_tail .* 0.08,label="Tail PDF", lw=3)
+x_range = [minimum(x_samples_smoothed); maximum(x_samples_smoothed)]
+plot(x_samples, x_samples_smoothed, seriestype=:scatter, label="Data")
+plot!(x_range, x_range, color=:black, linestyle=:dash, label="y=x")
+plot!(xlabel="Original X", ylabel="Smoothed X")
 ```
 
 # OLD STUFF
