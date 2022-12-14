@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.2.269">
+<meta name="generator" content="quarto-1.2.280">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -20,6 +20,25 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1.6em;
   vertical-align: middle;
+}
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
 }
 </style>
 
@@ -61,6 +80,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
 
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="../../styles.css">
 </head>
@@ -117,8 +137,11 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Contents</h2>
    
   <ul>
-  <li><a href="#generate-toy-dataset" id="toc-generate-toy-dataset" class="nav-link active" data-scroll-target="#generate-toy-dataset">Generate toy dataset</a></li>
+  <li><a href="#old-stuff" id="toc-old-stuff" class="nav-link active" data-scroll-target="#old-stuff">OLD STUFF</a>
+  <ul class="collapse">
+  <li><a href="#generate-toy-dataset" id="toc-generate-toy-dataset" class="nav-link" data-scroll-target="#generate-toy-dataset">Generate toy dataset</a></li>
   <li><a href="#outlier-detection" id="toc-outlier-detection" class="nav-link" data-scroll-target="#outlier-detection">Outlier Detection</a></li>
+  </ul></li>
   </ul>
 </nav>
 </nav>
@@ -154,13 +177,60 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
+<ul>
+<li>Running A/B tests targeting continuous metrics like revenue per visitor are important for companies to evaluate the financial impact of their interventions</li>
+<li>These metrics are often hard from a statistical perspective because they are influenced by outliers, which dramatically hurt experimental power</li>
+<li>One way to think about these outliers is to say you don’t want to optimize your website for a minority of extremely high value customers, since this is high risk. This thinking goes towards the ideas of quantitative finance, and I won’t explore this in this post.</li>
+<li>Another reason could be data issues. Lets assume we rule that out.</li>
+<li>The second way is to say you want to optimize your website for everyone, so you can’t ignore the outliers, but their existance makes standard statistical tests inefficient, so we try to find more efficient estimators that require introducing as little bias as possible.</li>
+<li>We can formalise this by assuming that the majority of our sample comes from some well behaved population distribution, but a small number of samples are drawn from a population distribution with infinite variance. For example, the Pareto distribution <span class="citation" data-cites="powerlaws">(<a href="#ref-powerlaws" role="doc-biblioref">Newman 2005</a>)</span>.</li>
+<li>This contribution from the infinite variance distribution is a problem, because it causes the mixture distribution to also have infinite variance, and therefore the central limit theorem breaks down.</li>
+</ul>
+<p>Method:</p>
+<p>The following is inspired by the Pareto Smoothed Importance Sampling paper <span class="citation" data-cites="psis">(<a href="#ref-psis" role="doc-biblioref">Vehtari et al. 2015</a>)</span>:</p>
+<ol type="1">
+<li>Set <span class="math inline">\(M = min(0.2 S, 3 \sqrt{S})\)</span></li>
+<li>Set <span class="math inline">\(\hat{u} = x_{S-M}\)</span></li>
+<li>Estimate <span class="math inline">\(\alpha\)</span> of the tail, using the standard Hill estimator</li>
+<li>Set <span class="math inline">\(x'_{S-M+z} = \min{ \left( F^{-1} \left( \frac{z - 1/2}{M} \right), \max_s{(x_s)} \right)}\)</span></li>
+</ol>
+<p>Now perform a t-test on <span class="math inline">\(x'\)</span> instead of <span class="math inline">\(x\)</span>.</p>
+<p>Hill estimator:</p>
+<p><span class="math display">\[
+\alpha = 1 + n \left[\sum_{i=1}^n \ln{ \frac{x_i}{x_\text{min}} } \right]^{-1}
+\]</span></p>
+<div class="cell" data-execution_count="2">
+<div class="cell-output cell-output-display" data-execution_count="3">
+<p><img src="index_files/figure-html/cell-3-output-1.svg" class="img-fluid"></p>
+</div>
+</div>
+<p>Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?</p>
+<div class="cell" data-execution_count="3">
+<div class="cell-output cell-output-stdout">
+<pre><code>4.518809851321794</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<p><img src="index_files/figure-html/cell-4-output-2.svg" class="img-fluid"></p>
+</div>
+</div>
+<p>Now I will implement my method</p>
+<div class="cell" data-execution_count="4">
+<div class="cell-output cell-output-stdout">
+<pre><code>4.518809851321794</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<p><img src="index_files/figure-html/cell-5-output-2.svg" class="img-fluid"></p>
+</div>
+</div>
+<section id="old-stuff" class="level1">
+<h1>OLD STUFF</h1>
 <p>In a lot of situations we have 1-D data which is skewed, and we want to remove the outliers on the right. This happens a lot when running experiments with continuous variables like revenue, where you can have a few data points which are very high revenue and hurt your variance a lot. Removing these outliers improves your variance a lot.</p>
 <section id="generate-toy-dataset" class="level2">
 <h2 class="anchored" data-anchor-id="generate-toy-dataset">Generate toy dataset</h2>
 <p>To test these methods, I need some synthetic data. I’ll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won’t work.</p>
-<div class="cell" data-execution_count="2">
-<div class="cell-output cell-output-display" data-execution_count="3">
-<p><img src="index_files/figure-html/cell-3-output-1.svg" class="img-fluid"></p>
+<div class="cell" data-execution_count="5">
+<div class="cell-output cell-output-display" data-execution_count="6">
+<p><img src="index_files/figure-html/cell-6-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
 </section>
@@ -171,21 +241,30 @@ ul.task-list li input[type="checkbox"] {
 <li>A KDE density estimation. This is for the bulk data, and is non-parametric so it should work on any dataset. I need to choose a kernel, for this data I’ll choose lognormal.</li>
 <li>A generalized pareto distribution. This should model the outliers.</li>
 </ol>
-<div class="cell" data-execution_count="3">
-<div class="cell-output cell-output-display" data-execution_count="4">
-<p><img src="index_files/figure-html/cell-4-output-1.svg" class="img-fluid"></p>
+<div class="cell" data-execution_count="6">
+<div class="cell-output cell-output-display" data-execution_count="7">
+<p><img src="index_files/figure-html/cell-7-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
-<div class="cell" data-execution_count="4">
-<div class="cell-output cell-output-display" data-execution_count="5">
-<p><img src="index_files/figure-html/cell-5-output-1.svg" class="img-fluid"></p>
+<div class="cell" data-execution_count="7">
+<div class="cell-output cell-output-display" data-execution_count="8">
+<p><img src="index_files/figure-html/cell-8-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
+
 
 
 </section>
+</section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-powerlaws" class="csl-entry" role="doc-biblioentry">
+Newman, MEJ. 2005. <span>“Power Laws, Pareto Distributions and Zipf<span></span>s Law.”</span> <em>Contemporary Physics</em> 46 (5): 323–51. <a href="https://doi.org/10.1080/00107510500052444">https://doi.org/10.1080/00107510500052444</a>.
+</div>
+<div id="ref-psis" class="csl-entry" role="doc-biblioentry">
+Vehtari, Aki, Daniel Simpson, Andrew Gelman, Yuling Yao, and Jonah Gabry. 2015. <span>“Pareto Smoothed Importance Sampling.”</span> arXiv. <a href="https://doi.org/10.48550/ARXIV.1507.02646">https://doi.org/10.48550/ARXIV.1507.02646</a>.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {

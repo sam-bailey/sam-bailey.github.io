@@ -7,25 +7,11 @@
     "text": "Hi there! I’m Sam Bailey, and I’m a Principal Data Scientist at Booking.com. My day job involves a lot of python, statistics, and randomised controlled trials.\nBut in my free time, I like to explore new topics that catch my interest. That usually involves writing some python or julia, whether it’s coding something from scratch or just testing out a new library.\nAt the end of the day, I try to put my thoughts into words and share them on this blog. I hope you find my musings interesting and maybe even useful! Thanks for stopping by.\nThis text was edited by ChatGPT, with the prompt “Make this sound like a light hearted, ‘about me’ section of a blog”."
   },
   {
-    "objectID": "posts/outliers-for-ab-testing/index.html",
-    "href": "posts/outliers-for-ab-testing/index.html",
-    "title": "Trimming Outliers for A/B Testing",
+    "objectID": "posts/welcome/index.html",
+    "href": "posts/welcome/index.html",
+    "title": "Welcome To My Blog",
     "section": "",
-    "text": "In a lot of situations we have 1-D data which is skewed, and we want to remove the outliers on the right. This happens a lot when running experiments with continuous variables like revenue, where you can have a few data points which are very high revenue and hurt your variance a lot. Removing these outliers improves your variance a lot."
-  },
-  {
-    "objectID": "posts/outliers-for-ab-testing/index.html#generate-toy-dataset",
-    "href": "posts/outliers-for-ab-testing/index.html#generate-toy-dataset",
-    "title": "Trimming Outliers for A/B Testing",
-    "section": "Generate toy dataset",
-    "text": "Generate toy dataset\nTo test these methods, I need some synthetic data. I’ll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won’t work."
-  },
-  {
-    "objectID": "posts/outliers-for-ab-testing/index.html#outlier-detection",
-    "href": "posts/outliers-for-ab-testing/index.html#outlier-detection",
-    "title": "Trimming Outliers for A/B Testing",
-    "section": "Outlier Detection",
-    "text": "Outlier Detection\nNow we want to try to identify the outliers that came from the pareto distributon. I’ll try to do this by modelling the data as:\n\nA KDE density estimation. This is for the bulk data, and is non-parametric so it should work on any dataset. I need to choose a kernel, for this data I’ll choose lognormal.\nA generalized pareto distribution. This should model the outliers."
+    "text": "This is the first post in a Quarto blog. Welcome!\n\nSince this post doesn’t specify an explicit image, the first image in the post will be used in the listing page of posts."
   },
   {
     "objectID": "posts/post-with-code/index.html",
@@ -42,18 +28,25 @@
     "text": "Subheading\nMore stuff"
   },
   {
-    "objectID": "posts/welcome/index.html",
-    "href": "posts/welcome/index.html",
-    "title": "Welcome To My Blog",
+    "objectID": "posts/outliers-for-ab-testing/index.html",
+    "href": "posts/outliers-for-ab-testing/index.html",
+    "title": "Trimming Outliers for A/B Testing",
     "section": "",
-    "text": "This is the first post in a Quarto blog. Welcome!\n\nSince this post doesn’t specify an explicit image, the first image in the post will be used in the listing page of posts."
+    "text": "Running A/B tests targeting continuous metrics like revenue per visitor are important for companies to evaluate the financial impact of their interventions\nThese metrics are often hard from a statistical perspective because they are influenced by outliers, which dramatically hurt experimental power\nOne way to think about these outliers is to say you don’t want to optimize your website for a minority of extremely high value customers, since this is high risk. This thinking goes towards the ideas of quantitative finance, and I won’t explore this in this post.\nAnother reason could be data issues. Lets assume we rule that out.\nThe second way is to say you want to optimize your website for everyone, so you can’t ignore the outliers, but their existance makes standard statistical tests inefficient, so we try to find more efficient estimators that require introducing as little bias as possible.\nWe can formalise this by assuming that the majority of our sample comes from some well behaved population distribution, but a small number of samples are drawn from a population distribution with infinite variance. For example, the Pareto distribution (Newman 2005).\nThis contribution from the infinite variance distribution is a problem, because it causes the mixture distribution to also have infinite variance, and therefore the central limit theorem breaks down.\nMethod:\nThe following is inspired by the Pareto Smoothed Importance Sampling paper (Vehtari et al. 2015):\nNow perform a t-test on \\(x'\\) instead of \\(x\\).\nHill estimator:\n\\[\n\\alpha = 1 + n \\left[\\sum_{i=1}^n \\ln{ \\frac{x_i}{x_\\text{min}} } \\right]^{-1}\n\\]\nNow lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?\nNow I will implement my method"
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Posts",
-    "section": "",
-    "text": "Trimming Outliers for A/B Testing\n\n\n1 min\n\n\n\nJulia\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Python Code\n\n\n0 min\n\n\n\nPython\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n0 min\n\n\n\n\n\n\nDec 5, 2022\n\n\n\n\n\n\n\n\nNo matching items"
+    "objectID": "posts/outliers-for-ab-testing/index.html#generate-toy-dataset",
+    "href": "posts/outliers-for-ab-testing/index.html#generate-toy-dataset",
+    "title": "Trimming Outliers for A/B Testing",
+    "section": "Generate toy dataset",
+    "text": "Generate toy dataset\nTo test these methods, I need some synthetic data. I’ll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won’t work."
+  },
+  {
+    "objectID": "posts/outliers-for-ab-testing/index.html#outlier-detection",
+    "href": "posts/outliers-for-ab-testing/index.html#outlier-detection",
+    "title": "Trimming Outliers for A/B Testing",
+    "section": "Outlier Detection",
+    "text": "Outlier Detection\nNow we want to try to identify the outliers that came from the pareto distributon. I’ll try to do this by modelling the data as:\n\nA KDE density estimation. This is for the bulk data, and is non-parametric so it should work on any dataset. I need to choose a kernel, for this data I’ll choose lognormal.\nA generalized pareto distribution. This should model the outliers."
   },
   {
     "objectID": "publications.html",
@@ -61,5 +54,12 @@
     "title": "Publications",
     "section": "",
     "text": "Expand To Learn About Collapse\n\n\n\n\n\nThis is an example of a ‘folded’ caution callout that can be expanded by the user. You can use collapse=\"true\" to collapse it by default or collapse=\"false\" to make a collapsible callout that is expanded by default."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Posts",
+    "section": "",
+    "text": "Post With Python Code\n\n\n0 min\n\n\n\nPython\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTrimming Outliers for A/B Testing\n\n\n4 min\n\n\n\nJulia\n\n\n\n\n\n\n\nDec 8, 2022\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n0 min\n\n\n\n\n\n\nDec 5, 2022\n\n\n\n\n\n\n\n\nNo matching items"
   }
 ]

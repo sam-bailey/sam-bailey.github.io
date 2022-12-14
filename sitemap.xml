@@ -2,26 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://sambailey.me/about.html</loc>
-    <lastmod>2022-12-14T16:12:26.129Z</lastmod>
-  </url>
-  <url>
-    <loc>https://sambailey.me/posts/outliers-for-ab-testing/index.html</loc>
-    <lastmod>2022-12-14T16:12:27.273Z</lastmod>
-  </url>
-  <url>
-    <loc>https://sambailey.me/posts/post-with-code/index.html</loc>
-    <lastmod>2022-12-14T16:12:28.013Z</lastmod>
+    <lastmod>2022-12-14T23:21:35.372Z</lastmod>
   </url>
   <url>
     <loc>https://sambailey.me/posts/welcome/index.html</loc>
-    <lastmod>2022-12-14T16:12:28.325Z</lastmod>
+    <lastmod>2022-12-14T23:21:36.012Z</lastmod>
   </url>
   <url>
-    <loc>https://sambailey.me/index.html</loc>
-    <lastmod>2022-12-14T16:12:28.677Z</lastmod>
+    <loc>https://sambailey.me/posts/post-with-code/index.html</loc>
+    <lastmod>2022-12-14T23:21:36.696Z</lastmod>
+  </url>
+  <url>
+    <loc>https://sambailey.me/posts/outliers-for-ab-testing/index.html</loc>
+    <lastmod>2022-12-14T23:21:37.476Z</lastmod>
   </url>
   <url>
     <loc>https://sambailey.me/publications.html</loc>
-    <lastmod>2022-12-14T16:12:28.969Z</lastmod>
+    <lastmod>2022-12-14T23:21:37.748Z</lastmod>
+  </url>
+  <url>
+    <loc>https://sambailey.me/index.html</loc>
+    <lastmod>2022-12-14T23:21:38.060Z</lastmod>
   </url>
 </urlset>
