@@ -2,9 +2,10 @@
 title: "Trimming Outliers for A/B Testing"
 date: "2022-12-08"
 categories: [Julia]
-image: ../../_freeze/posts/outliers-for-ab-testing/index/figure-html/cell-3-output-1.svg
+image: ../../_freeze/posts/outliers-for-ab-testing/index/figure-html/fig-samples-output-1.svg
 jupyter: "julia-1.8"
 bibliography: references.bib
+cap-location: margin
 ---
 
 ```{julia}
@@ -13,11 +14,11 @@ bibliography: references.bib
 
 using Pkg
 Pkg.add([
-     "Plots",
-     "Random",
-     "Distributions",
-     "Optim",
-	 "StatsBase"
+	"Plots",
+    "Random",
+    "Distributions",
+    "Optim",
+	"StatsBase"
 ])
 
 using Random, Distributions, Optim, StatsBase
@@ -39,7 +40,7 @@ Method:
 
 The following is inspired by the Pareto Smoothed Importance Sampling paper [@psis]:
 
-1. Set $M = min(0.2 S, 3 \sqrt{S})$
+1. Set $M = min(0.2 S, 3 \sqrt{S})$ OR find best M using KS-test [@powerlawsempirical];
 2. Set $\hat{u} = x_{S-M}$
 3. Estimate $\alpha$ of the tail, using the standard Hill estimator
 4. Set $x'_{S-M+z} = \min{ \left( F^{-1} \left( \frac{z - 1/2}{M} \right), \max_s{(x_s)} \right)}$
@@ -53,30 +54,36 @@ $$
 $$
 
 ```{julia}
+#| label: fig-samples
+#| fig-cap: "Histogram of samples from simulated data (blue), and the theoretical PDF (orange)."
+
 data_dist = MixtureModel(
 	[
 	   LogNormal(2.0, 0.5),
-	   GeneralizedPareto(0.0, 5.0, 0.8)
+	   GeneralizedPareto(0.0, 20.0, 0.7)
 	], 
 	[0.97, 0.03]
 );
 
 x_samples = rand(data_dist, 1000);
 
-x = LinRange(0.001,40,300)
-y = pdf.(data_dist, x)
+x = LinRange(0.001,40,1000)
+y_pdf = pdf.(data_dist, x)
 
 histogram(
      x_samples, 
      normalize=true, 
-     label="Samples" 
+     label="Samples"
 )
-plot!(x,y,label="PDF", lw=3)
+plot!(x,y_pdf,label="PDF", lw=3)
 ```
 
 Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?
 
 ```{julia}
+#| label: fig-tail-fit
+#| fig-cap: "A plot of the empirical survival function of the samples (blue) and the pareto distribution fit to the tail (red)."
+
 function get_tail_index(n::Int)
 	trunc(Int, minimum([0.2 * n, 3.0 * sqrt(n)]))
 end
@@ -93,7 +100,7 @@ end
 function tail_plot(x::Vector{Float64})
 	x_sorted = sort(x)
 	share_above = 1.0 .- (collect(1:length(x)) .- 1) / length(x)
-	plot(x_sorted, share_above, xscale=:log10, yscale=:log10, seriestype=:scatter, label="Samples")
+	plot(x_sorted, share_above, xscale=:log10, yscale=:log10, seriestype=:line, label="Empirical")
 	plot!(xlabel="X", ylabel="P(x > X)")
 end
 
@@ -118,6 +125,9 @@ tail_plot(x_samples, tail_dist)
 Now I will implement my method
 
 ```{julia}
+#| label: fig-smoothed-data
+#| fig-cap: "How the data points have changed after smoothing. Points that fall on the y=x line (black) are unchanged."
+
 function adjust_tail_value(x::Float64, inverse_rank_x::Int, tail_dist::Pareto{Float64}, max_tail_rank::Int)
 	α, θ = params(tail_dist)
 	if x <= θ
@@ -158,6 +168,8 @@ In a lot of situations we have 1-D data which is skewed, and we want to remove t
 To test these methods, I need some synthetic data. I'll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won't work.
 
 ```{julia}
+#| execute: false
+
 data_dist = MixtureModel(
 	[
 	   LogNormal(2.0, 0.5),
@@ -188,6 +200,8 @@ Now we want to try to identify the outliers that came from the pareto distributo
 2. A generalized pareto distribution. This should model the outliers.
 
 ```{julia}
+#| execute: false
+
 function kde(samples::Vector{Float64}, bandwidth::Float64, x::Float64, weights::Vector{Float64})
 	sum(weights .* pdf.(Normal.(log.(samples), bandwidth), log(x))) / (sum(weights) * x)
 end
@@ -222,6 +236,8 @@ plot(x_bandwidth, y_bandwidth, xscale=:log10)
 ```
 
 ```{julia}
+#| execute: false
+
 bw = fit_kde(x_samples)
 y_kde = kde.(Ref(x_samples), bw, x, Ref(ones(length(x_samples))))
 
