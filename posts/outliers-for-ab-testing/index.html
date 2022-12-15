@@ -85,7 +85,7 @@ div.csl-indent {
 <link rel="stylesheet" href="../../styles.css">
 </head>
 
-<body class="floating nav-fixed">
+<body class="floating nav-fixed slimcontent">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -149,7 +149,7 @@ div.csl-indent {
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
+<main class="content page-columns page-full" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
@@ -189,7 +189,7 @@ div.csl-indent {
 <p>Method:</p>
 <p>The following is inspired by the Pareto Smoothed Importance Sampling paper <span class="citation" data-cites="psis">(<a href="#ref-psis" role="doc-biblioref">Vehtari et al. 2015</a>)</span>:</p>
 <ol type="1">
-<li>Set <span class="math inline">\(M = min(0.2 S, 3 \sqrt{S})\)</span></li>
+<li>Set <span class="math inline">\(M = min(0.2 S, 3 \sqrt{S})\)</span> OR find best M using KS-test <span class="citation" data-cites="powerlawsempirical">(<a href="#ref-powerlawsempirical" role="doc-biblioref">Clauset, Shalizi, and Newman 2009</a>)</span>;</li>
 <li>Set <span class="math inline">\(\hat{u} = x_{S-M}\)</span></li>
 <li>Estimate <span class="math inline">\(\alpha\)</span> of the tail, using the standard Hill estimator</li>
 <li>Set <span class="math inline">\(x'_{S-M+z} = \min{ \left( F^{-1} \left( \frac{z - 1/2}{M} \right), \max_s{(x_s)} \right)}\)</span></li>
@@ -199,27 +199,42 @@ div.csl-indent {
 <p><span class="math display">\[
 \alpha = 1 + n \left[\sum_{i=1}^n \ln{ \frac{x_i}{x_\text{min}} } \right]^{-1}
 \]</span></p>
-<div class="cell" data-execution_count="2">
-<div class="cell-output cell-output-display" data-execution_count="3">
-<p><img src="index_files/figure-html/cell-3-output-1.svg" class="img-fluid"></p>
+<div class="cell page-columns page-full" data-execution_count="2">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="21">
+<div id="fig-samples" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-samples-output-1.svg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;1: Histogram of samples from simulated data (blue), and the theoretical PDF (orange).</figcaption><p></p>
+</figure>
+</div>
 </div>
 </div>
 <p>Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?</p>
-<div class="cell" data-execution_count="3">
+<div class="cell page-columns page-full" data-execution_count="3">
 <div class="cell-output cell-output-stdout">
-<pre><code>4.518809851321794</code></pre>
+<pre><code>3.8462279264072197</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="4">
-<p><img src="index_files/figure-html/cell-4-output-2.svg" class="img-fluid"></p>
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="22">
+<div id="fig-tail-fit" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-tail-fit-output-2.svg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;2: A plot of the empirical survival function of the samples (blue) and the pareto distribution fit to the tail (red).</figcaption><p></p>
+</figure>
+</div>
 </div>
 </div>
 <p>Now I will implement my method</p>
-<div class="cell" data-execution_count="4">
+<div class="cell page-columns page-full" data-execution_count="4">
 <div class="cell-output cell-output-stdout">
-<pre><code>4.518809851321794</code></pre>
+<pre><code>3.8462279264072197</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="5">
-<p><img src="index_files/figure-html/cell-5-output-2.svg" class="img-fluid"></p>
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="23">
+<div id="fig-smoothed-data" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-smoothed-data-output-2.svg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;3: How the data points have changed after smoothing. Points that fall on the y=x line (black) are unchanged.</figcaption><p></p>
+</figure>
+</div>
 </div>
 </div>
 <section id="old-stuff" class="level1">
@@ -229,7 +244,7 @@ div.csl-indent {
 <h2 class="anchored" data-anchor-id="generate-toy-dataset">Generate toy dataset</h2>
 <p>To test these methods, I need some synthetic data. I’ll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won’t work.</p>
 <div class="cell" data-execution_count="5">
-<div class="cell-output cell-output-display" data-execution_count="6">
+<div class="cell-output cell-output-display" data-execution_count="24">
 <p><img src="index_files/figure-html/cell-6-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
@@ -242,12 +257,12 @@ div.csl-indent {
 <li>A generalized pareto distribution. This should model the outliers.</li>
 </ol>
 <div class="cell" data-execution_count="6">
-<div class="cell-output cell-output-display" data-execution_count="7">
+<div class="cell-output cell-output-display" data-execution_count="25">
 <p><img src="index_files/figure-html/cell-7-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
 <div class="cell" data-execution_count="7">
-<div class="cell-output cell-output-display" data-execution_count="8">
+<div class="cell-output cell-output-display" data-execution_count="26">
 <p><img src="index_files/figure-html/cell-8-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
@@ -258,6 +273,9 @@ div.csl-indent {
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-powerlawsempirical" class="csl-entry" role="doc-biblioentry">
+Clauset, Aaron, Cosma Rohilla Shalizi, and M. E. J. Newman. 2009. <span>“Power-Law Distributions in Empirical Data.”</span> <em>SIAM Review</em> 51 (4): 661–703. <a href="https://doi.org/10.1137/070710111">https://doi.org/10.1137/070710111</a>.
+</div>
 <div id="ref-powerlaws" class="csl-entry" role="doc-biblioentry">
 Newman, MEJ. 2005. <span>“Power Laws, Pareto Distributions and Zipf<span></span>s Law.”</span> <em>Contemporary Physics</em> 46 (5): 323–51. <a href="https://doi.org/10.1080/00107510500052444">https://doi.org/10.1080/00107510500052444</a>.
 </div>
