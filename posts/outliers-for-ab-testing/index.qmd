@@ -14,15 +14,16 @@ cap-location: margin
 
 using Pkg
 Pkg.add([
-	"Plots",
     "Random",
     "Distributions",
     "Optim",
-	"StatsBase"
+	"StatsBase",
+	"HypothesisTests",
+	"StatsPlots"
 ])
 
-using Random, Distributions, Optim, StatsBase
-using Plots
+using Random, Distributions, Optim, StatsBase, HypothesisTests
+using StatsPlots
 
 Random.seed!(123);
 ```
@@ -35,6 +36,19 @@ Random.seed!(123);
 * We can formalise this by assuming that the majority of our sample comes from some well behaved population distribution, but a small number of samples are drawn from a population distribution with infinite variance. For example, the Pareto distribution [@powerlaws].
 * This contribution from the infinite variance distribution is a problem, because it causes the mixture distribution to also have infinite variance, and therefore the central limit theorem breaks down. 
 
+TODO:
+* Compare trimming, winzoring and pareto smoothing with different cutoffs
+* Use KDE + Pareto mixture. Then take the mean of the MLE pareto + mean of other data for estimator. Use laplace approx for variance.
+* Basic check: is Hill better at estimating mean than sample mean?
+
+SECTIONS:
+1. Introduction on A/B testing, revenue as a metric, and outliers. Talk about outliers as coming from a distribution with infinite population variance.
+2. Infinite population variance: the Pareto distribution. What does infinite variance mean? Why is it a problem for A/B testing? Do a simulation with a simple welches t-test.
+3. What can we not do? Log transform, median test, non-parametric test. We care about the mean. 
+4. Simple solutions: trimming vs windsorizing. These are a bias variance tradeoff. How do they perform? Do the same simulations.
+5. What if we model the tail as a pareto distribution directly? Try PSIS and a KDE + Pareto Mixture for MLE. 
+6. Choosing the best cutoff? KS test, AIC, BIC, Mixture? Mixture doesn't need a cutoff - that's nice. 
+7. Final comparison and results. My recommendation. Key points - choose the cutoff without looking at the results to avoid peaking.  
 
 Method:
 
@@ -52,6 +66,84 @@ Hill estimator:
 $$
 \alpha = 1 + n \left[\sum_{i=1}^n \ln{ \frac{x_i}{x_\text{min}} } \right]^{-1}
 $$
+
+Throughout this article we will use two types of distributions to represent distributions with infinite variance, the Pareto distribution and the Generalised Pareto Distribution (GPD). 
+
+```{julia}
+#| label: fig-pareto
+#| fig-cap: "A comparison between the standard pareto distribution (red), the Generalised Pareto Distribution (blue), and the log-normal distribution (green). "
+#| column: margin
+gpd = GeneralizedPareto(0.0, 20.0, 0.7)
+pd = Pareto(1.0 / 0.7, 20.0)
+log_norm = LogNormal(4.5, 1.0)
+
+plot(gpd, label="Generalised Pareto")
+plot!(pd, label="Pareto")
+plot!(log_norm, label="Log-Normal")
+plot!(xscale=:log10, yscale=:log10, ylabel="P(x)", xlabel="x", xrange=[1.0; 10000.0], yrange=[0.0000001; 0.4])
+```
+
+Both of these distributions have a power law tail, and therefore can have infinite variance. This is noticable when plotted on a log-log scale (as is shown in @fig-pareto), where the tail will be linear. This is shown in contrast to a Log-Normal distribution, where the tail is not Linear, and eventually at very high $X$ the PDF drops below the power law tails. 
+
+While the two types of pareto distribution have the same tail behavior, they differ in how they behave at small values of $X$. The Pareto distribution is a pure power law until some value, below which the probability mass is 0, while the Generalised Pareto Distribution smoothly transitions away from being power law at low X. The GPD is a more general distribution - with the correct parameters in the GPD you can get back to the Pareto distribution - however it can be harder to fit to data because it has more parameters. 
+
+The challenge for A/B testing can be demonstrated by comparing these distributions with the log-normal distribution. While you are always able to calculate the sample variance of any sample of data, whether it is from a population with finite or infinite variance, if the sample is drawn from a population with infinite variance then the sample variance will not converge as the sample size increases. You can see this in the example below, where I sample from a GPD and a LogNormal Distribution and then calculate the sample variance vs sample size. 
+
+```{julia}
+#| label: fig-inf-variance
+#| fig-cap: ""
+
+function cumvar(x::Vector{Float64})
+	sum_x = cumsum(x)
+	sum_x2 = cumsum(x.^2)
+	n = 1:length(x)
+
+	var = sum_x2 ./ n - (sum_x ./ n).^2
+	return var
+end
+
+function plot_var_vs_samplesize(dist::UnivariateDistribution, max_samples::Int64, title::String)
+	p = plot(
+		xscale = :log10, 
+		yscale=:log10, 
+		xlabel="Sample Size", 
+		ylabel="Sample Variance", 
+		yrange=[0.5, 1e8], 
+		title=title
+	)
+	samples = [cumvar(rand(dist, max_samples)) for i in 1:20]
+
+	plot!(
+		1:max_samples, 
+		samples[1], 
+		color=:black, 
+		alpha=0.2, 
+		label="Samples"
+	)
+	plot!(
+		1:max_sample_size, 
+		samples[2:length(samples)], 
+		color=:black, 
+		alpha=0.2, 
+		label=""
+	)
+	return p
+end
+
+max_sample_size = 100000
+
+p1 = plot_var_vs_samplesize(gpd, max_sample_size, "GPD")
+p2 = plot_var_vs_samplesize(log_norm, max_sample_size, "Log-Normal")
+hline!([var(log_norm)], color=:red, label="Population Variance")
+
+plot(p1, p2)
+```
+
+
+```{julia}
+
+```
+
 
 ```{julia}
 #| label: fig-samples
@@ -76,6 +168,7 @@ histogram(
      label="Samples"
 )
 plot!(x,y_pdf,label="PDF", lw=3)
+xlabel!("X")
 ```
 
 Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?
@@ -84,15 +177,28 @@ Now lets investigate the tail of this distribution. Does it look like a power la
 #| label: fig-tail-fit
 #| fig-cap: "A plot of the empirical survival function of the samples (blue) and the pareto distribution fit to the tail (red)."
 
-function get_tail_index(n::Int)
-	trunc(Int, minimum([0.2 * n, 3.0 * sqrt(n)]))
+function get_tail_index(x::Vector{Float64})
+	x_sorted = sort(x, rev=true)
+	m_max = trunc(Int, minimum([0.2 * length(x), 3.0 * sqrt(length(x))]))
+
+	best_ks = Inf
+	best_m = nothing
+	for m in 2:m_max
+		dist_i = fit_pareto_tail(x_sorted[1:m])
+		ks_result = ExactOneSampleKSTest(x_sorted[1:m], dist_i)
+		if ks_result.δ < best_ks
+			best_ks = ks_result.δ
+			best_m = m
+			println(best_m)
+		end
+	end
+	best_m
 end
 
 function fit_pareto_tail(x_tail_sorted::Vector{Float64})
 	m = length(x_tail_sorted)
 	θ = minimum(x_tail_sorted)
 	α = 1.0 + m / (sum(log.(x_tail_sorted)) - m * log(θ))
-	println(α)
 
 	return Pareto(α, θ)
 end 
@@ -107,14 +213,16 @@ end
 function tail_plot(x::Vector{Float64}, tail_dist::Pareto{Float64})
 	tail_plot(x)
 	α, θ = params(tail_dist)
-
+	
 	x_dist = sort(x[x .> θ])
+	ks_result = ExactOneSampleKSTest(x_dist, tail_dist)
 	y_dist = ccdf(tail_dist, x_dist) .* (length(x_dist) / length(x))
 	plot!(x_dist, y_dist, label="Tail Pareto Fit")
+	title!("KS Test Statistic: $(ks_result.δ)")
 end
 
 r = ordinalrank(x_samples, rev=true)
-m = get_tail_index(length(x_samples))
+m = get_tail_index(x_samples)
 
 x_tail = x_samples[r .<= m]
 tail_dist = fit_pareto_tail(x_tail)
@@ -126,7 +234,7 @@ Now I will implement my method
 
 ```{julia}
 #| label: fig-smoothed-data
-#| fig-cap: "How the data points have changed after smoothing. Points that fall on the y=x line (black) are unchanged."
+#| fig-cap: "How the data points have changed after smoothing. Points that fall on the y=x line (black) are unchanged. The outliers in the smoothed distribution are still there, but now they are less extreme."
 
 function adjust_tail_value(x::Float64, inverse_rank_x::Int, tail_dist::Pareto{Float64}, max_tail_rank::Int)
 	α, θ = params(tail_dist)
@@ -154,9 +262,97 @@ end
 
 x_samples_smoothed = smooth_pareto_tail(x_samples)
 x_range = [minimum(x_samples_smoothed); maximum(x_samples_smoothed)]
-plot(x_samples, x_samples_smoothed, seriestype=:scatter, label="Data")
-plot!(x_range, x_range, color=:black, linestyle=:dash, label="y=x")
+
+l = @layout [a [b ; c]]
+
+h1 = histogram(
+     x_samples_smoothed, 
+     normalize=true, 
+     label="Smoothed X"
+)
+xlabel!("Smoothed X")
+
+h2 = histogram(
+     x_samples, 
+     normalize=true, 
+     label="Original X"
+)
+xlabel!("Original X")
+
+s1 = plot(
+	x_samples, 
+	x_samples_smoothed, 
+	seriestype=:scatter,
+	label="Data"
+)
+plot!(
+	x_range, 
+	x_range, 
+	color=:black, 
+	linestyle=:dash, 
+	label="y=x"
+)
 plot!(xlabel="Original X", ylabel="Smoothed X")
+
+plot(s1, h1, h2, layout = l)
+```
+
+Now test it systematically
+
+```{julia}
+function run_mean_estimation_simulation(n_iter::Int64, sample_size::Int64, true_dist::UnivariateDistribution, mean_estimator)
+	tot_squared_error = 0.0
+	tot_bias = 0.0
+	n_covered = 0
+
+	μ_true = mean(true_dist)
+	for i in 1:n_iter
+		μ, μ_lb, μ_ub = mean_estimator(rand(true_dist, sample_size))
+
+		if (μ_true > μ_lb) & (μ_true < μ_ub)
+			n_covered += 1
+		end
+
+		tot_squared_error += (μ - μ_true)^2
+		tot_bias += μ - μ_true
+	end
+
+	rmse = sqrt(tot_squared_error / n_iter)
+	bias = tot_bias / n_iter
+	coverage = n_covered / n_iter
+
+	return rmse, bias, coverage
+end
+
+function simple_mean_est(x::Vector{Float64})
+	μ = mean(x)
+	σ = std(x) / sqrt(length(x))
+	μ_lb = μ - 1.645 * σ
+	μ_ub = μ + 1.645 * σ
+
+	return μ, μ_lb, μ_ub
+end
+
+run_mean_estimation_simulation(
+	10000,
+	10000, 
+	data_dist, 
+	simple_mean_est
+)
+```
+
+```{julia}
+function pareto_smoothed_mean_est(x::Vector{Float64})
+	x_smooth = smooth_pareto_tail(x)
+	return simple_mean_est(x_smooth)
+end
+
+run_mean_estimation_simulation(
+	10000,
+	10000, 
+	data_dist, 
+	pareto_smoothed_mean_est
+)
 ```
 
 # OLD STUFF
