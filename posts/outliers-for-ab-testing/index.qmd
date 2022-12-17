@@ -14,9 +14,9 @@ cap-location: margin
 
 using Pkg
 Pkg.add([
-    "Random",
-    "Distributions",
-    "Optim",
+	"Random",
+	"Distributions",
+	"Optim",
 	"StatsBase",
 	"HypothesisTests",
 	"StatsPlots",
@@ -197,7 +197,6 @@ function plot_pareto_estimators(
 		n_iterations,
 		estimator
 	)
-
 	print(title)
 	print(" ")
 	print(mean(results))
@@ -274,7 +273,7 @@ data_dist = MixtureModel(
 	   LogNormal(3.8, 0.5),
 	   GeneralizedPareto(0.0, 40.0, 0.7)
 	], 
-	[0.5, 0.47, 0.03]
+	[0.5, 0.4, 0.1]
 );
 
 x_samples = rand(data_dist, 1000);
@@ -306,274 +305,212 @@ Now I can build my method to estimate the mean of that distribution, and the sta
 
 Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?
 
-EM algorithm:
-
-1. Set threshold at fixed starting point. Should be on the low side.
-2. Set initial P(tail) to be 0.5 for all data points above the threshold, and 0.0 for all below.
-2. Fit KDE to all data points by maximising LOO.
-3. Fit Pareto to tail. 
-4. Calculate P(tail) for each point in the tail, using the two distributions
-5. Set new tail where P(pareto) > 0.5
-6. Repeat until convergence (max weight change below tol)
-
-Afterwards:
-
+1. Set the tail threshold as the smallest possible value where the KS test p_value >= 0.05
 1. Calculate mean and standard error using Hill estimator for all samples in the tail
 2. Calculate normal mean and standard error for all samples, also based on their weights
 3. Combine the two estimates to get an overal mean and standard error
 
-First I need to fit a KDE to some data:
+ITS CLOSE BUT I MUST HAVE SLIGHTLY THE WRONG FORMULAS
 
 ```{julia}
-#| label: fig-kde
-#| fig-cap: "To test my kde fitting algorithm, I put a random hard threshold at 200 and then fit the distribution. The KDE estimate looks like a very good approximation."
+# function fit_pareto(log_x::Vector{Float64})
+# 	n = length(log_x)
+# 	log_θ = minimum(log_x)
+# 	α = n / (sum(log_x) - n * log_θ)
 
-mutable struct LooKDE
-	x::Vector{Float64}
-	log_x::Vector{Float64}
-	w::Vector{Float64}
-    bw::Float64
-	n::Int64
-    function LooKDE(x::Vector{Float64}, w::Vector{Float64})
-		@assert length(x) == length(w)
-		log_x = log.(x)
-		n = length(x)
-		bw = 1.06 * std(log_x, Weights(w)) * n^(-1/5.0)
-        return new(
-			x,
-			log_x,
-			w,
-			bw,
-			n
-		)
-    end 
-end
+# 	return Pareto(α, exp(log_θ))
+# end
 
-function loo_pdf_logscale(kde::LooKDE, i::Int, bw::Float64)
-	sum(kde.w[1:end .!= i] .* pdf.(Normal.(kde.log_x[1:end .!= i], bw), kde.log_x[i])) / sum(kde.w)
-end
-
-function loo_pdf_logscale(kde::LooKDE, i::Int)
-	loo_pdf_logscale(kde, i, kde.bw)
-end
-
-function loo_pdf(kde::LooKDE, i::Int)
-	loo_pdf_logscale(kde, i) / kde.x[i]
-end
-
-function loo_pdf(kde::LooKDE)
-	[loo_pdf(kde, i) for i in 1:kde.n]
-end
-
-function loo_logloss(
-	kde::LooKDE,
-	bw::Float64
-)
-	loo_pdf = [loo_pdf_logscale(kde, i, bw) for i in 1:kde.n]
-	return -1 * sum(kde.w .* log.(loo_pdf)) / sum(kde.w)
-end
-
-function fit!(kde::LooKDE)
-	f(log_bw_i) = loo_logloss(kde, exp(log_bw_i[1]))
-	initial_x = [kde.bw]
-	best_bw = exp(Optim.minimizer(optimize(f, initial_x))[1])
-	kde.bw = best_bw
-end
-
-test_x = x_samples[x_samples .< 200.0]
-kde = LooKDE(test_x, ones(Float64, size(test_x)))
-fit!(kde)
-
-histogram(
-     test_x, 
-     normalize=true, 
-     label="Samples";
-	 bins = 0:1:200 
-)
-
-idx_kde = sortperm(test_x)
-x_kde = test_x
-y_kde = loo_pdf(kde)
-plot!(x_kde[idx_kde], y_kde[idx_kde],label="KDE Estimate", lw=2)
-xlabel!("X")
-```
-
-Now I can combine my KDE and Pareto distributions to create my pareto tail adjusted estimator.
-
-```{julia}
-# Mixture Fitting
-
-function init_tail_index(n::Int64)
+function set_tail_index(x::Vector{Float64})
+	n = length(x)
 	trunc(Int, minimum([0.2 * n, 3.0 * sqrt(n)]))
 end
 
-function init_p_tail(tail_index::Int64, x::Vector{Float64})
-	w = zeros(Float64, size(x))
-	w[1:tail_index] .= 0.5
-	return w
-end
+function hill_tail_estimator(x_in::Vector{Float64})
+	x = sort(x_in, rev=true)
+	tail_index = set_tail_index(x)
 
-function fit_pareto(log_x::Vector{Float64}, w::Vector{Float64})
-	w_tot = sum(w)
+	x_tail = x[1:tail_index]
+	x_non_tail = x[tail_index+1:length(x)]
 
-	log_θ = minimum(log_x)
-	α = w_tot / (sum(w .* log_x) - w_tot * log_θ)
+	μ_tail, σ_tail = hill_estimator(x_tail)
+	μ_non_tail, σ_non_tail = sample_mean_variance_estimator(x_non_tail)
 
-	return Pareto(α, exp(log_θ))
-end
+	n_tail = tail_index
+	n = length(x)
+	n_non_tail = n - μ_non_tail
 
-mutable struct KDEParetoMixture
-    x::Vector{Float64}
-	log_x::Vector{Float64}
-    p_tail::Vector{Float64}
-	n::Int64
-	kde::LooKDE
-	tail_index::Int64
-	pareto::Pareto
-    function KDEParetoMixture(x_in::Vector{Float64})
-		x = sort(x_in, rev=true)
-		log_x = log.(x)
-		n = length(x)
-		tail_index = init_tail_index(n)
-		p_tail = init_p_tail(tail_index, x)
-		pareto = fit_pareto(log_x[1:tail_index], p_tail[1:tail_index])
-		kde = LooKDE(x, 1.0 .- p_tail)
-		fit!(kde)
+	μ = μ_tail * n_tail / n + μ_non_tail * n_non_tail / n
 
-        return new(
-			x,
-			log_x,
-			p_tail,
-			n,
-			kde,
-			tail_index,
-			pareto
-		)
-    end 
-end
-
-function step!(kde_mix::KDEParetoMixture)
-	tot_p_tail = mean(kde_mix.p_tail)
-	println(tot_p_tail)
-	p_kde = loo_pdf(kde_mix.kde) .* (1.0 - tot_p_tail)
-	p_pareto = pdf.(kde_mix.pareto, kde_mix.x) .* tot_p_tail
-	p_tail = p_pareto ./ (p_kde .+ p_pareto)
-
-	tail_index = findfirst(p_tail .<= 0.5)
-	p_tail[tail_index+1:length(p_tail)] .= 0.0
-
-	kde = LooKDE(kde_mix.x, 1.0 .- p_tail)
-	fit!(kde)
-
-	pareto = fit_pareto(kde_mix.log_x[1:tail_index], p_tail[1:tail_index])
-
-	kde_mix.pareto = pareto
-	kde_mix.kde = kde
-	kde_mix.p_tail = p_tail
-	kde_mix.tail_index = tail_index
-end
-
-function plot_kde_mix(kde_mix::KDEParetoMixture)
-	x_tail = kde_mix.x[1:kde_mix.tail_index]
-	x_non_tail = kde_mix.x[(kde_mix.tail_index+1):length(kde_mix.x)]
-	println(length(kde_mix.x))
-	println(length(x_tail))
-	println(length(x_non_tail))
-
-	p1 = histogram(
-		x_non_tail, 
-		normalize=false, 
-		label="Non Tail Samples";
-		bins = 0:1:maximum(kde_mix.x),
-		bar_width=1, 
-		c=1, 
-		lc=1
+	var_tail = σ_tail^2 * n_tail
+	var_non_tail = σ_non_tail^2 * n_non_tail
+	var = (
+		n_tail / n * (var_tail + μ_tail^2)
+		+ n_non_tail / n * (var_non_tail + μ_non_tail^2)
+		- μ^2
 	)
 
-	histogram!(
-		x_tail, 
-		normalize=false, 
-		label="Tail Samples";
-		bins = 0:1:maximum(kde_mix.x),
-		bar_width=1, 
-		c=2, 
-		lc=2
-	)
-	xlabel!("X")
+	σ = sqrt(var / n)
 
-	p2 = plot(
-		kde_mix.x,
-		kde_mix.p_tail,
-		legend=false
-	)
-	xlabel!("X")
-	ylabel!("P(tail)")
-
-	plot(p1, p2, layout=grid(2,1))
+	return μ, σ
 end
 
-kde_mix = KDEParetoMixture(x_samples)
-step!(kde_mix)
-step!(kde_mix)
-step!(kde_mix)
-plot_kde_mix(kde_mix)
+function windzorised_estimator(x_in::Vector{Float64})
+	x = sort(x_in, rev=true)
+	tail_index = set_tail_index(x)
+
+	x[1:tail_index] .= x[tail_index]
+	return sample_mean_variance_estimator(x)
+end
+
+function trimmed_estimator(x_in::Vector{Float64})
+	x = sort(x_in, rev=true)
+	tail_index = set_tail_index(x)
+
+	return sample_mean_variance_estimator(x[tail_index+1:length(x)])
+end
+
+l = @layout [[a;b] [c;d]]
+
+p1 = plot_pareto_estimators(
+	data_dist,
+	20000,
+	1000,
+	sample_mean_variance_estimator,
+	"Sample Mean / Var Estimator",
+	legend=true
+)
+
+p2 = plot_pareto_estimators(
+	data_dist,
+	20000,
+	1000,
+	trimmed_estimator,
+	"Trimmed Estimator"
+)
+
+p3 = plot_pareto_estimators(
+	data_dist,
+	20000,
+	1000,
+	windzorised_estimator,
+	"Windsorized Estimator"
+)
+
+p4 = plot_pareto_estimators(
+	data_dist,
+	20000,
+	1000,
+	hill_tail_estimator,
+	"Hill Tail Estimator"
+)
+
+plot(p1, p2, p3, p4, layout=l)
 ```
+
+
+```{julia}
+# function calculate_cumulative_ks(x_in::Vector{Float64})
+# 	x = sort(x_in, rev=true)
+# 	w = ones(Float64, size(x))
+# 	log_x = log.(x)
+
+# 	ks = [
+# 		begin
+# 			pareto = fit_pareto(log_x[1:m], w[1:m])
+# 			pvalue(ExactOneSampleKSTest(x[1:m], pareto))
+# 		end
+# 		for m in 1:length(x)
+# 	]
+
+# 	return ks
+# end
+
+# ks = calculate_cumulative_ks(x_samples)
+
+# p1 = plot(sort(x_samples, rev=true), qks, label="p-value")
+
+# max_idx = findfirst(ks .< 0.05)
+# println(max_idx)
+# threshold = sort(x_samples, rev=true)[max_idx]
+# vline!([threshold], color=:black, label="Best Threshold")
+# plot!(xscale=:log10)
+# xlabel!("X Threshold")
+# ylabel!("BIC")
+
+# p2 = histogram(
+# 	x_samples, 
+# 	normalize=true, 
+# 	label="Samples";
+# 	bins = 0:1:200 
+# )
+# vline!([threshold], color=:black, label="Best Threshold")
+
+# plot(p1, p2)
+```
+
+
+
+
+
+
+
 
 
 ```{julia}
 #| label: fig-tail-fit
 #| fig-cap: "A plot of the empirical survival function of the samples (blue) and the pareto distribution fit to the tail (red)."
 
-function fit_pareto_tail(x_tail_sorted::Vector{Float64})
-	m = length(x_tail_sorted)
-	θ = minimum(x_tail_sorted)
-	α = 1.0 + m / (sum(log.(x_tail_sorted)) - m * log(θ))
+# function fit_pareto_tail(x_tail_sorted::Vector{Float64})
+# 	m = length(x_tail_sorted)
+# 	θ = minimum(x_tail_sorted)
+# 	α = 1.0 + m / (sum(log.(x_tail_sorted)) - m * log(θ))
 
-	return Pareto(α, θ)
-end 
+# 	return Pareto(α, θ)
+# end 
 
-function get_tail_index(x::Vector{Float64})
-	x_sorted = sort(x, rev=true)
-	m_max = trunc(Int, minimum([0.2 * length(x), 3.0 * sqrt(length(x))]))
+# function get_tail_index(x::Vector{Float64})
+# 	x_sorted = sort(x, rev=true)
+# 	m_max = trunc(Int, minimum([0.2 * length(x), 3.0 * sqrt(length(x))]))
 
-	best_ks = Inf
-	best_m = nothing
-	for m in 2:m_max
-		dist_i = fit_pareto_tail(x_sorted[1:m])
-		ks_result = ExactOneSampleKSTest(x_sorted[1:m], dist_i)
-		if ks_result.δ < best_ks
-			best_ks = ks_result.δ
-			best_m = m
-		end
-	end
-	best_m
-end
+# 	best_ks = Inf
+# 	best_m = nothing
+# 	for m in 2:m_max
+# 		dist_i = fit_pareto_tail(x_sorted[1:m])
+# 		ks_result = ExactOneSampleKSTest(x_sorted[1:m], dist_i)
+# 		if ks_result.δ < best_ks
+# 			best_ks = ks_result.δ
+# 			best_m = m
+# 		end
+# 	end
+# 	best_m
+# end
 
-function tail_plot(x::Vector{Float64})
-	x_sorted = sort(x)
-	share_above = 1.0 .- (collect(1:length(x)) .- 1) / length(x)
-	plot(x_sorted, share_above, xscale=:log10, yscale=:log10, seriestype=:line, label="Empirical")
-	plot!(xlabel="X", ylabel="P(x > X)")
-end
+# function tail_plot(x::Vector{Float64})
+# 	x_sorted = sort(x)
+# 	share_above = 1.0 .- (collect(1:length(x)) .- 1) / length(x)
+# 	plot(x_sorted, share_above, xscale=:log10, yscale=:log10, seriestype=:line, label="Empirical")
+# 	plot!(xlabel="X", ylabel="P(x > X)")
+# end
 
-function tail_plot(x::Vector{Float64}, tail_dist::Pareto{Float64})
-	tail_plot(x)
-	α, θ = params(tail_dist)
+# function tail_plot(x::Vector{Float64}, tail_dist::Pareto{Float64})
+# 	tail_plot(x)
+# 	α, θ = params(tail_dist)
 	
-	x_dist = sort(x[x .> θ])
-	ks_result = ExactOneSampleKSTest(x_dist, tail_dist)
-	y_dist = ccdf(tail_dist, x_dist) .* (length(x_dist) / length(x))
-	plot!(x_dist, y_dist, label="Tail Pareto Fit")
-	title!("KS Test Statistic: $(ks_result.δ)")
-end
+# 	x_dist = sort(x[x .> θ])
+# 	ks_result = ExactOneSampleKSTest(x_dist, tail_dist)
+# 	y_dist = ccdf(tail_dist, x_dist) .* (length(x_dist) / length(x))
+# 	plot!(x_dist, y_dist, label="Tail Pareto Fit")
+# 	title!("KS Test Statistic: $(ks_result.δ)")
+# end
 
-r = ordinalrank(x_samples, rev=true)
-m = get_tail_index(x_samples)
+# r = ordinalrank(x_samples, rev=true)
+# m = get_tail_index(x_samples)
 
-x_tail = x_samples[r .<= m]
-tail_dist = fit_pareto_tail(x_tail)
+# x_tail = x_samples[r .<= m]
+# tail_dist = fit_pareto_tail(x_tail)
 
-tail_plot(x_samples, tail_dist)
+# tail_plot(x_samples, tail_dist)
 ```
 
 Now I will implement my method
@@ -582,123 +519,123 @@ Now I will implement my method
 #| label: fig-smoothed-data
 #| fig-cap: "How the data points have changed after smoothing. Points that fall on the y=x line (black) are unchanged. The outliers in the smoothed distribution are still there, but now they are less extreme."
 
-function adjust_tail_value(x::Float64, inverse_rank_x::Int, tail_dist::Pareto{Float64}, max_tail_rank::Int)
-	α, θ = params(tail_dist)
-	if x <= θ
-		return x
-	else
-		return quantile(tail_dist, (max_tail_rank - inverse_rank_x + 0.5) / max_tail_rank)
-	end
-end
+# function adjust_tail_value(x::Float64, inverse_rank_x::Int, tail_dist::Pareto{Float64}, max_tail_rank::Int)
+# 	α, θ = params(tail_dist)
+# 	if x <= θ
+# 		return x
+# 	else
+# 		return quantile(tail_dist, (max_tail_rank - inverse_rank_x + 0.5) / max_tail_rank)
+# 	end
+# end
 
-function smooth_pareto_tail(x::Vector{Float64})
-	r = ordinalrank(x, rev=true)
-	n = length(x)
-	m = get_tail_index(x)
+# function smooth_pareto_tail(x::Vector{Float64})
+# 	r = ordinalrank(x, rev=true)
+# 	n = length(x)
+# 	m = get_tail_index(x)
 
-	x_tail = x[r .<= m]
-	tail_dist = fit_pareto_tail(x_tail)
+# 	x_tail = x[r .<= m]
+# 	tail_dist = fit_pareto_tail(x_tail)
 
-	y_tail = pdf.(tail_dist, x)
+# 	y_tail = pdf.(tail_dist, x)
 
-	x_out = adjust_tail_value.(x, r, tail_dist, m)
+# 	x_out = adjust_tail_value.(x, r, tail_dist, m)
 
-	return x_out
-end
+# 	return x_out
+# end
 
-x_samples_smoothed = smooth_pareto_tail(x_samples)
-x_range = [minimum(x_samples_smoothed); maximum(x_samples_smoothed)]
+# x_samples_smoothed = smooth_pareto_tail(x_samples)
+# x_range = [minimum(x_samples_smoothed); maximum(x_samples_smoothed)]
 
-l = @layout [a [b ; c]]
+# l = @layout [a [b ; c]]
 
-h1 = histogram(
-     x_samples_smoothed, 
-     normalize=true, 
-     label="Smoothed X"
-)
-xlabel!("Smoothed X")
+# h1 = histogram(
+#      x_samples_smoothed, 
+#      normalize=true, 
+#      label="Smoothed X"
+# )
+# xlabel!("Smoothed X")
 
-h2 = histogram(
-     x_samples, 
-     normalize=true, 
-     label="Original X"
-)
-xlabel!("Original X")
+# h2 = histogram(
+#      x_samples, 
+#      normalize=true, 
+#      label="Original X"
+# )
+# xlabel!("Original X")
 
-s1 = plot(
-	x_samples, 
-	x_samples_smoothed, 
-	seriestype=:scatter,
-	label="Data"
-)
-plot!(
-	x_range, 
-	x_range, 
-	color=:black, 
-	linestyle=:dash, 
-	label="y=x"
-)
-plot!(xlabel="Original X", ylabel="Smoothed X")
+# s1 = plot(
+# 	x_samples, 
+# 	x_samples_smoothed, 
+# 	seriestype=:scatter,
+# 	label="Data"
+# )
+# plot!(
+# 	x_range, 
+# 	x_range, 
+# 	color=:black, 
+# 	linestyle=:dash, 
+# 	label="y=x"
+# )
+# plot!(xlabel="Original X", ylabel="Smoothed X")
 
-plot(s1, h1, h2, layout = l)
+# plot(s1, h1, h2, layout = l)
 ```
 
 Now test it systematically
 
 ```{julia}
-function run_mean_estimation_simulation(n_iter::Int64, sample_size::Int64, true_dist::UnivariateDistribution, mean_estimator)
-	tot_squared_error = 0.0
-	tot_bias = 0.0
-	n_covered = 0
+# function run_mean_estimation_simulation(n_iter::Int64, sample_size::Int64, true_dist::UnivariateDistribution, mean_estimator)
+# 	tot_squared_error = 0.0
+# 	tot_bias = 0.0
+# 	n_covered = 0
 
-	μ_true = mean(true_dist)
-	for i in 1:n_iter
-		μ, μ_lb, μ_ub = mean_estimator(rand(true_dist, sample_size))
+# 	μ_true = mean(true_dist)
+# 	for i in 1:n_iter
+# 		μ, μ_lb, μ_ub = mean_estimator(rand(true_dist, sample_size))
 
-		if (μ_true > μ_lb) & (μ_true < μ_ub)
-			n_covered += 1
-		end
+# 		if (μ_true > μ_lb) & (μ_true < μ_ub)
+# 			n_covered += 1
+# 		end
 
-		tot_squared_error += (μ - μ_true)^2
-		tot_bias += μ - μ_true
-	end
+# 		tot_squared_error += (μ - μ_true)^2
+# 		tot_bias += μ - μ_true
+# 	end
 
-	rmse = sqrt(tot_squared_error / n_iter)
-	bias = tot_bias / n_iter
-	coverage = n_covered / n_iter
+# 	rmse = sqrt(tot_squared_error / n_iter)
+# 	bias = tot_bias / n_iter
+# 	coverage = n_covered / n_iter
 
-	return rmse, bias, coverage
-end
+# 	return rmse, bias, coverage
+# end
 
-function simple_mean_est(x::Vector{Float64})
-	μ = mean(x)
-	σ = std(x) / sqrt(length(x))
-	μ_lb = μ - 1.645 * σ
-	μ_ub = μ + 1.645 * σ
+# function simple_mean_est(x::Vector{Float64})
+# 	μ = mean(x)
+# 	σ = std(x) / sqrt(length(x))
+# 	μ_lb = μ - 1.645 * σ
+# 	μ_ub = μ + 1.645 * σ
 
-	return μ, μ_lb, μ_ub
-end
+# 	return μ, μ_lb, μ_ub
+# end
 
-run_mean_estimation_simulation(
-	10000,
-	10000, 
-	data_dist, 
-	simple_mean_est
-)
+# run_mean_estimation_simulation(
+# 	10000,
+# 	10000, 
+# 	data_dist, 
+# 	simple_mean_est
+# )
 ```
 
 ```{julia}
-function pareto_smoothed_mean_est(x::Vector{Float64})
-	x_smooth = smooth_pareto_tail(x)
-	return simple_mean_est(x_smooth)
-end
+# function pareto_smoothed_mean_est(x::Vector{Float64})
+# 	x_smooth = smooth_pareto_tail(x)
+# 	return simple_mean_est(x_smooth)
+# end
 
-run_mean_estimation_simulation(
-	10000,
-	10000, 
-	data_dist, 
-	pareto_smoothed_mean_est
-)
+# run_mean_estimation_simulation(
+# 	10000,
+# 	10000, 
+# 	data_dist, 
+# 	pareto_smoothed_mean_est
+# )
 ```
 
 # OLD STUFF
@@ -712,26 +649,26 @@ To test these methods, I need some synthetic data. I'll generate a mixture of a 
 ```{julia}
 #| execute: false
 
-data_dist = MixtureModel(
-	[
-	   LogNormal(2.0, 0.5),
-	   Pareto(1.8,15)
-	], 
-	[0.98, 0.02]
-);
+# data_dist = MixtureModel(
+# 	[
+# 	   LogNormal(2.0, 0.5),
+# 	   Pareto(1.8,15)
+# 	], 
+# 	[0.98, 0.02]
+# );
 
-x_samples = rand(data_dist, 1000);
+# x_samples = rand(data_dist, 1000);
 
-x = LinRange(0.001,40,300)
-y = pdf.(data_dist, x)
+# x = LinRange(0.001,40,300)
+# y = pdf.(data_dist, x)
 
-histogram(
-     x_samples, 
-     normalize=true, 
-     # bins = x, 
-     label="Samples" 
-)
-plot!(x,y,label="PDF", lw=3)
+# histogram(
+#      x_samples, 
+#      normalize=true, 
+#      # bins = x, 
+#      label="Samples" 
+# )
+# plot!(x,y,label="PDF", lw=3)
 ```
 
 ## Outlier Detection
@@ -744,51 +681,244 @@ Now we want to try to identify the outliers that came from the pareto distributo
 ```{julia}
 #| execute: false
 
-function kde(samples::Vector{Float64}, bandwidth::Float64, x::Float64, weights::Vector{Float64})
-	sum(weights .* pdf.(Normal.(log.(samples), bandwidth), log(x))) / (sum(weights) * x)
-end
+# function kde(samples::Vector{Float64}, bandwidth::Float64, x::Float64, weights::Vector{Float64})
+# 	sum(weights .* pdf.(Normal.(log.(samples), bandwidth), log(x))) / (sum(weights) * x)
+# end
 
-function kde_loo(log_samples::Vector{Float64}, bandwidth::Float64, i::Int, weights::Vector{Float64})
-	sum(weights[1:end .!= i] .* pdf.(Normal.(log_samples[1:end .!= i], bandwidth), log_samples[i])) / sum(weights)
-end
+# function kde_loo(log_samples::Vector{Float64}, bandwidth::Float64, i::Int, weights::Vector{Float64})
+# 	sum(weights[1:end .!= i] .* pdf.(Normal.(log_samples[1:end .!= i], bandwidth), log_samples[i])) / sum(weights)
+# end
 
-function kde_logloss(
-	samples::Vector{Float64},
-	bandwidth::Float64,
-	weights::Vector{Float64}
-)
-	log_samples = log.(samples)
-	kde_est = kde_loo.(Ref(log_samples), bandwidth, 1:length(samples), Ref(weights))
-	return -1 * sum(weights .* log.(kde_est)) / sum(weights)
-end
+# function kde_logloss(
+# 	samples::Vector{Float64},
+# 	bandwidth::Float64,
+# 	weights::Vector{Float64}
+# )
+# 	log_samples = log.(samples)
+# 	kde_est = kde_loo.(Ref(log_samples), bandwidth, 1:length(samples), Ref(weights))
+# 	return -1 * sum(weights .* log.(kde_est)) / sum(weights)
+# end
 
-function fit_kde(samples::Vector{Float64}, weights::Vector{Float64})
-	f(log_bw_i) = kde_logloss(samples, exp(log_bw_i[1]), weights);
-	initial_x = [10.0];
-	exp(Optim.minimizer(optimize(f, initial_x))[1])
-end
+# function fit_kde(samples::Vector{Float64}, weights::Vector{Float64})
+# 	f(log_bw_i) = kde_logloss(samples, exp(log_bw_i[1]), weights);
+# 	initial_x = [10.0];
+# 	exp(Optim.minimizer(optimize(f, initial_x))[1])
+# end
 
-function fit_kde(samples::Vector{Float64})
-	fit_kde(samples, ones(length(samples)))
-end
+# function fit_kde(samples::Vector{Float64})
+# 	fit_kde(samples, ones(length(samples)))
+# end
 
-x_bandwidth = exp10.(LinRange(-2, 2, 100))
-y_bandwidth = kde_logloss.(Ref(x_samples), x_bandwidth, Ref(ones(length(x_samples))))
-plot(x_bandwidth, y_bandwidth, xscale=:log10)
+# x_bandwidth = exp10.(LinRange(-2, 2, 100))
+# y_bandwidth = kde_logloss.(Ref(x_samples), x_bandwidth, Ref(ones(length(x_samples))))
+# plot(x_bandwidth, y_bandwidth, xscale=:log10)
 ```
 
 ```{julia}
 #| execute: false
 
-bw = fit_kde(x_samples)
-y_kde = kde.(Ref(x_samples), bw, x, Ref(ones(length(x_samples))))
+# bw = fit_kde(x_samples)
+# y_kde = kde.(Ref(x_samples), bw, x, Ref(ones(length(x_samples))))
 
-histogram(
-     x_samples, 
-     normalize=true, 
-     bins = x, 
-     label="Samples" 
-)
-plot!(x,y,label="PDF", lw=3)
-plot!(x,y_kde,label="KDE", lw=3)
+# histogram(
+#      x_samples, 
+#      normalize=true, 
+#      bins = x, 
+#      label="Samples" 
+# )
+# plot!(x,y,label="PDF", lw=3)
+# plot!(x,y_kde,label="KDE", lw=3)
+```
+
+
+```{julia}
+#| label: fig-kde
+#| fig-cap: "To test my kde fitting algorithm, I put a random hard threshold at 200 and then fit the distribution. The KDE estimate looks like a very good approximation."
+
+# mutable struct LooKDE
+# 	x::Vector{Float64}
+# 	log_x::Vector{Float64}
+# 	w::Vector{Float64}
+#     bw::Float64
+# 	n::Int64
+#     function LooKDE(x::Vector{Float64}, w::Vector{Float64})
+# 		@assert length(x) == length(w)
+# 		log_x = log.(x)
+# 		n = length(x)
+# 		bw = 1.06 * std(log_x, Weights(w)) * n^(-1/5.0)
+#         return new(
+# 			x,
+# 			log_x,
+# 			w,
+# 			bw,
+# 			n
+# 		)
+#     end 
+# end
+
+# function loo_pdf_logscale(kde::LooKDE, i::Int, bw::Float64)
+# 	sum(kde.w[1:end .!= i] .* pdf.(Normal.(kde.log_x[1:end .!= i], bw), kde.log_x[i])) / sum(kde.w)
+# end
+
+# function loo_pdf_logscale(kde::LooKDE, i::Int)
+# 	loo_pdf_logscale(kde, i, kde.bw)
+# end
+
+# function loo_pdf(kde::LooKDE, i::Int)
+# 	loo_pdf_logscale(kde, i) / kde.x[i]
+# end
+
+# function loo_pdf(kde::LooKDE)
+# 	[loo_pdf(kde, i) for i in 1:kde.n]
+# end
+
+# function loo_logloss(
+# 	kde::LooKDE,
+# 	bw::Float64
+# )
+# 	loo_pdf = [loo_pdf_logscale(kde, i, bw) for i in 1:kde.n]
+# 	return -1 * sum(kde.w .* log.(loo_pdf)) / sum(kde.w)
+# end
+
+# function fit!(kde::LooKDE)
+# 	f(log_bw_i) = loo_logloss(kde, exp(log_bw_i[1]))
+# 	initial_x = [kde.bw]
+# 	best_bw = exp(Optim.minimizer(optimize(f, initial_x))[1])
+# 	kde.bw = best_bw
+# end
+
+# test_x = x_samples[x_samples .< 200.0]
+# kde = LooKDE(test_x, ones(Float64, size(test_x)))
+# fit!(kde)
+
+# histogram(
+#      test_x, 
+#      normalize=true, 
+#      label="Samples";
+# 	 bins = 0:1:200 
+# )
+
+# idx_kde = sortperm(test_x)
+# x_kde = test_x
+# y_kde = loo_pdf(kde)
+# plot!(x_kde[idx_kde], y_kde[idx_kde],label="KDE Estimate", lw=2)
+# xlabel!("X")
+```
+
+```{julia}
+
+# function init_p_tail(tail_index::Int64, x::Vector{Float64})
+# 	w = zeros(Float64, size(x))
+# 	w[1:tail_index] .= 0.5
+# 	return w
+# end
+
+# function fit_pareto(log_x::Vector{Float64}, w::Vector{Float64})
+# 	w_tot = sum(w)
+
+# 	log_θ = minimum(log_x)
+# 	α = w_tot / (sum(w .* log_x) - w_tot * log_θ)
+
+# 	return Pareto(α, exp(log_θ))
+# end
+
+# mutable struct KDEParetoMixture
+#     x::Vector{Float64}
+# 	log_x::Vector{Float64}
+#     p_tail::Vector{Float64}
+# 	n::Int64
+# 	kde::LooKDE
+# 	tail_index::Int64
+# 	pareto::Pareto
+#     function KDEParetoMixture(x_in::Vector{Float64})
+# 		x = sort(x_in, rev=true)
+# 		log_x = log.(x)
+# 		n = length(x)
+# 		tail_index = set_tail_index(x)
+# 		p_tail = init_p_tail(tail_index, x)
+# 		pareto = fit_pareto(log_x[1:tail_index], p_tail[1:tail_index])
+# 		kde = LooKDE(x, 1.0 .- p_tail)
+# 		fit!(kde)
+
+#         return new(
+# 			x,
+# 			log_x,
+# 			p_tail,
+# 			n,
+# 			kde,
+# 			tail_index,
+# 			pareto
+# 		)
+#     end 
+# end
+
+# function step!(kde_mix::KDEParetoMixture)
+# 	tot_p_tail = mean(kde_mix.p_tail)
+# 	p_kde = loo_pdf(kde_mix.kde) .* (1.0 - tot_p_tail)
+# 	p_pareto = pdf.(kde_mix.pareto, kde_mix.x) .* tot_p_tail
+# 	p_tail = p_pareto ./ (p_kde .+ p_pareto)
+
+# 	kde = LooKDE(kde_mix.x, 1.0 .- p_tail)
+# 	fit!(kde)
+
+# 	pareto = fit_pareto(kde_mix.log_x[1:kde_mix.tail_index], p_tail[1:kde_mix.tail_index])
+
+# 	kde_mix.pareto = pareto
+# 	kde_mix.kde = kde
+# 	kde_mix.p_tail = p_tail
+# end
+
+# function plot_kde_mix(kde_mix)
+# 	x_tail = kde_mix.x[1:kde_mix.tail_index]
+# 	x_non_tail = kde_mix.x[(kde_mix.tail_index+1):length(kde_mix.x)]
+
+# 	p1 = histogram(
+# 		x_non_tail, 
+# 		normalize=false, 
+# 		label="Non Tail Samples";
+# 		bins = 0:1:maximum(kde_mix.x),
+# 		bar_width=1, 
+# 		c=1, 
+# 		lc=1
+# 	)
+
+# 	histogram!(
+# 		x_tail, 
+# 		normalize=false, 
+# 		label="Tail Samples";
+# 		bins = 0:1:maximum(kde_mix.x),
+# 		bar_width=1, 
+# 		c=2, 
+# 		lc=2
+# 	)
+# 	xlabel!("X")
+
+# 	p2 = plot(
+# 		kde_mix.x,
+# 		kde_mix.p_tail,
+# 		label="Estimate"
+# 	)
+# 	true_pareto = pdf.(component(data_dist,3), kde_mix.x) .* probs(data_dist)[3]
+# 	true_non_pareto = (
+# 		pdf.(component(data_dist,1), kde_mix.x) .* probs(data_dist)[1] .+
+# 		pdf.(component(data_dist,2), kde_mix.x) .* probs(data_dist)[2]
+# 	)
+# 	true_p_tail = true_pareto ./ (true_pareto .+ true_non_pareto)
+# 	plot!(
+# 		kde_mix.x,
+# 		true_p_tail,
+# 		label="True"
+# 	)
+
+# 	xlabel!("X")
+# 	ylabel!("P(tail)")
+
+# 	plot(p1, p2, layout=grid(2,1))
+# end
+
+# kde_mix = KDEParetoMixture(x_samples)
+# step!(kde_mix)
+# # step!(kde_mix)
+# # step!(kde_mix)
+# plot_kde_mix(kde_mix)
 ```
