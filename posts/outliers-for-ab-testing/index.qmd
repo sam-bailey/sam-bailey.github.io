@@ -26,6 +26,7 @@ Pkg.add([
 using Random, Distributions, Optim, StatsBase, HypothesisTests
 using StatsPlots, LaTeXStrings
 
+gr(html_output_format = :png)
 Random.seed!(123);
 ```
 
@@ -136,7 +137,7 @@ p1 = plot_var_vs_samplesize(gpd, max_sample_size, "GPD")
 p2 = plot_var_vs_samplesize(log_norm, max_sample_size, "Log-Normal")
 hline!([var(log_norm)], color=:red, label="Population Variance")
 
-plot(p1, p2)
+plot(p1, p2, fmt = :png)
 ```
 
 This causes problems for the t-test, since it uses the sample variance to estimate the standard error on the mean. So if your data has a power law tail, it's unlikely that this will give a good estimate. 
