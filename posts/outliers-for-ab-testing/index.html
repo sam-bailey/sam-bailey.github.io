@@ -186,6 +186,8 @@ div.csl-indent {
 <li>We can formalise this by assuming that the majority of our sample comes from some well behaved population distribution, but a small number of samples are drawn from a population distribution with infinite variance. For example, the Pareto distribution <span class="citation" data-cites="powerlaws">(<a href="#ref-powerlaws" role="doc-biblioref">Newman 2005</a>)</span>.</li>
 <li>This contribution from the infinite variance distribution is a problem, because it causes the mixture distribution to also have infinite variance, and therefore the central limit theorem breaks down.</li>
 </ul>
+<p>TODO: * Compare trimming, winzoring and pareto smoothing with different cutoffs * Use KDE + Pareto mixture. Then take the mean of the MLE pareto + mean of other data for estimator. Use laplace approx for variance. * Basic check: is Hill better at estimating mean than sample mean?</p>
+<p>SECTIONS: 1. Introduction on A/B testing, revenue as a metric, and outliers. Talk about outliers as coming from a distribution with infinite population variance. 2. Infinite population variance: the Pareto distribution. What does infinite variance mean? Why is it a problem for A/B testing? Do a simulation with a simple welches t-test. 3. What can we not do? Log transform, median test, non-parametric test. We care about the mean. 4. Simple solutions: trimming vs windsorizing. These are a bias variance tradeoff. How do they perform? Do the same simulations. 5. What if we model the tail as a pareto distribution directly? Try PSIS and a KDE + Pareto Mixture for MLE. 6. Choosing the best cutoff? KS test, AIC, BIC, Mixture? Mixture doesn’t need a cutoff - that’s nice. 7. Final comparison and results. My recommendation. Key points - choose the cutoff without looking at the results to avoid peaking.</p>
 <p>Method:</p>
 <p>The following is inspired by the Pareto Smoothed Importance Sampling paper <span class="citation" data-cites="psis">(<a href="#ref-psis" role="doc-biblioref">Vehtari et al. 2015</a>)</span>:</p>
 <ol type="1">
@@ -199,55 +201,109 @@ div.csl-indent {
 <p><span class="math display">\[
 \alpha = 1 + n \left[\sum_{i=1}^n \ln{ \frac{x_i}{x_\text{min}} } \right]^{-1}
 \]</span></p>
+<p>Throughout this article we will use two types of distributions to represent distributions with infinite variance, the Pareto distribution and the Generalised Pareto Distribution (GPD).</p>
 <div class="cell page-columns page-full" data-execution_count="2">
-<div class="cell-output cell-output-display page-columns page-full" data-execution_count="21">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="3">
+<div id="fig-pareto" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-pareto-output-1.svg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;1: A comparison between the standard pareto distribution (red), the Generalised Pareto Distribution (blue), and the log-normal distribution (green).</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Both of these distributions have a power law tail, and therefore can have infinite variance. This is noticable when plotted on a log-log scale (as is shown in <a href="#fig-pareto">Figure&nbsp;1</a>), where the tail will be linear. This is shown in contrast to a Log-Normal distribution, where the tail is not Linear, and eventually at very high <span class="math inline">\(X\)</span> the PDF drops below the power law tails.</p>
+<p>While the two types of pareto distribution have the same tail behavior, they differ in how they behave at small values of <span class="math inline">\(X\)</span>. The Pareto distribution is a pure power law until some value, below which the probability mass is 0, while the Generalised Pareto Distribution smoothly transitions away from being power law at low X. The GPD is a more general distribution - with the correct parameters in the GPD you can get back to the Pareto distribution - however it can be harder to fit to data because it has more parameters.</p>
+<p>The challenge for A/B testing can be demonstrated by comparing these distributions with the log-normal distribution. While you are always able to calculate the sample variance of any sample of data, whether it is from a population with finite or infinite variance, if the sample is drawn from a population with infinite variance then the sample variance will not converge as the sample size increases. You can see this in the example below, where I sample from a GPD and a LogNormal Distribution and then calculate the sample variance vs sample size.</p>
+<div class="cell page-columns page-full" data-execution_count="3">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="4">
+<div id="fig-inf-variance" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-inf-variance-output-1.svg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;2: <strong>?(caption)</strong></figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<p>This causes problems for the t-test, since it uses the sample variance to estimate the standard error on the mean. So if your data has a power law tail, it’s unlikely that this will give a good estimate.</p>
+<p>Power law tails are usualy quantified using the Hill Estimator. We can get the standard error on that estimate too. Let’s compare the Hill estimator + Delta method with the mean and variance estimator for the regular Pareto distribution.</p>
+<div class="cell page-columns page-full" data-execution_count="4">
+<div class="cell-output cell-output-stdout">
+<pre><code>Sample Mean / Var Estimator
+(n=200) -1.3965659791961105 </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>1.9111371877365484</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hill Estimator
+(n=200) -0.28134915336893007 1.0589227061388358</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sample Mean / Var Estimator
+(n=10,000) -1.0553330056952266 1.5698344731984775</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hill Estimator
+(n=10,000) -0.03310762675581043 0.9803369870820887</code></pre>
+</div>
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="5">
+<div id="fig-hill-estimator" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-hill-estimator-output-6.svg" class="img-fluid figure-img"></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;3: Estimating the mean and the standard error for samples taken from a Pareto Distribution. Using the sample mean and variance (left) and using the Hill estimator (right), for two sample sizes: 200 (top) and 10000 (bottom). Compared with the expected t-distribtuion with d.o.f = samples size - 1.</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<p>You can see that the hill estimator performs much better than using the same mean and variance.</p>
+<p>So we want to use the Hill estimator instead of the sample mean and variance, but <strong>only in the tail</strong>. The rest of the distribution is unlikely to be pareto distributed, so the Hill estimator would fail there. This brings us to the next challenge: how do we decide when we are “in the tail”?</p>
+<p>To do this, we will use a semi-parametric mixture of the Pareto distribution in the tail and a Kernel Density Approximation (KDE) elsewhere. The KDE bandwidth and cutoff threshold for the tail will be chosen by maximizing the Leave-One-Out (LOO) likelihood.</p>
+<p>To test this out, I’ll create a synthetic dataset which is a mixture of a GPD and two lognormal distributions. This will make the main distribution bimodal (and so not too easy for our method) but with a power law tail that gives it infinite variance. This distribution is shown in <a href="#fig-samples">Figure&nbsp;4</a>.</p>
+<div class="cell page-columns page-full" data-execution_count="5">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="6">
 <div id="fig-samples" class="quarto-figure quarto-figure-center anchored page-columns page-full">
 <figure class="figure page-columns page-full">
 <p><img src="index_files/figure-html/fig-samples-output-1.svg" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;1: Histogram of samples from simulated data (blue), and the theoretical PDF (orange).</figcaption><p></p>
+<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;4: Histogram of samples from simulated data (blue), and the theoretical PDF (orange).</figcaption><p></p>
 </figure>
 </div>
 </div>
 </div>
+<p>Now I can build my method to estimate the mean of that distribution, and the standard error on the mean.</p>
 <p>Now lets investigate the tail of this distribution. Does it look like a power law? Can we fit one to it?</p>
-<div class="cell page-columns page-full" data-execution_count="3">
+<ol type="1">
+<li>Set the tail threshold as the smallest possible value where the KS test p_value &gt;= 0.05</li>
+<li>Calculate mean and standard error using Hill estimator for all samples in the tail</li>
+<li>Calculate normal mean and standard error for all samples, also based on their weights</li>
+<li>Combine the two estimates to get an overal mean and standard error</li>
+</ol>
+<p>ITS CLOSE BUT I MUST HAVE SLIGHTLY THE WRONG FORMULAS</p>
+<div class="cell" data-execution_count="6">
 <div class="cell-output cell-output-stdout">
-<pre><code>3.8462279264072197</code></pre>
+<pre><code>Sample Mean / Var Estimator -1.019205622066096 1.5717106001048053</code></pre>
 </div>
-<div class="cell-output cell-output-display page-columns page-full" data-execution_count="22">
-<div id="fig-tail-fit" class="quarto-figure quarto-figure-center anchored page-columns page-full">
-<figure class="figure page-columns page-full">
-<p><img src="index_files/figure-html/fig-tail-fit-output-2.svg" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;2: A plot of the empirical survival function of the samples (blue) and the pareto distribution fit to the tail (red).</figcaption><p></p>
-</figure>
+<div class="cell-output cell-output-stdout">
+<pre><code>Trimmed Estimator -53.63337250341208 1.6880891161091203</code></pre>
 </div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Windsorized Estimator -35.66970540022096 1.7011737548929817</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hill Tail Estimator -0.23894055319894975 1.1651315741813204</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<p><img src="index_files/figure-html/cell-7-output-5.svg" class="img-fluid"></p>
 </div>
 </div>
 <p>Now I will implement my method</p>
-<div class="cell page-columns page-full" data-execution_count="4">
-<div class="cell-output cell-output-stdout">
-<pre><code>3.8462279264072197</code></pre>
-</div>
-<div class="cell-output cell-output-display page-columns page-full" data-execution_count="23">
-<div id="fig-smoothed-data" class="quarto-figure quarto-figure-center anchored page-columns page-full">
-<figure class="figure page-columns page-full">
-<p><img src="index_files/figure-html/fig-smoothed-data-output-2.svg" class="img-fluid figure-img"></p>
-<p></p><figcaption class="figure-caption margin-caption">Figure&nbsp;3: How the data points have changed after smoothing. Points that fall on the y=x line (black) are unchanged.</figcaption><p></p>
-</figure>
-</div>
-</div>
-</div>
+<p>Now test it systematically</p>
 <section id="old-stuff" class="level1">
 <h1>OLD STUFF</h1>
 <p>In a lot of situations we have 1-D data which is skewed, and we want to remove the outliers on the right. This happens a lot when running experiments with continuous variables like revenue, where you can have a few data points which are very high revenue and hurt your variance a lot. Removing these outliers improves your variance a lot.</p>
 <section id="generate-toy-dataset" class="level2">
 <h2 class="anchored" data-anchor-id="generate-toy-dataset">Generate toy dataset</h2>
 <p>To test these methods, I need some synthetic data. I’ll generate a mixture of a log-normal distribution and a Pareto distribution. The lognormal represents most users, but the Pareto represents the outliers. The pareto is especially problematic for statistics, since it has infinite variance, meaning the CLT won’t work.</p>
-<div class="cell" data-execution_count="5">
-<div class="cell-output cell-output-display" data-execution_count="24">
-<p><img src="index_files/figure-html/cell-6-output-1.svg" class="img-fluid"></p>
-</div>
-</div>
 </section>
 <section id="outlier-detection" class="level2">
 <h2 class="anchored" data-anchor-id="outlier-detection">Outlier Detection</h2>
@@ -256,16 +312,6 @@ div.csl-indent {
 <li>A KDE density estimation. This is for the bulk data, and is non-parametric so it should work on any dataset. I need to choose a kernel, for this data I’ll choose lognormal.</li>
 <li>A generalized pareto distribution. This should model the outliers.</li>
 </ol>
-<div class="cell" data-execution_count="6">
-<div class="cell-output cell-output-display" data-execution_count="25">
-<p><img src="index_files/figure-html/cell-7-output-1.svg" class="img-fluid"></p>
-</div>
-</div>
-<div class="cell" data-execution_count="7">
-<div class="cell-output cell-output-display" data-execution_count="26">
-<p><img src="index_files/figure-html/cell-8-output-1.svg" class="img-fluid"></p>
-</div>
-</div>
 
 
 
