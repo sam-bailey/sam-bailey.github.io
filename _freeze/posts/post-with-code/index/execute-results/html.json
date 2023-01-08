@@ -1,7 +1,7 @@
 {
-  "hash": "7513a33a109591b52638efee48146087",
+  "hash": "57d209be6a704c4038dfcf3fe3cd10ca",
   "result": {
-    "markdown": "---\ntitle: Post With Python Code\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png\n---\n\nThis is a post with executable code. Let's try some python.\n\n::: {.cell execution_count=1}\n``` {.python .cell-code}\nimport numpy as np\nimport pylab as plt\nimport pandas as pd\n\nx = np.linspace(0.0,3.0,100)\ny = np.sin(x)\nplt.plot(x, y)\n```\n\n::: {.cell-output .cell-output-display}\n![](index_files/figure-html/cell-2-output-1.png){width=571 height=411}\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\nMore stuff\n\n",
+    "markdown": "---\ntitle: Post With Python Code\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/post-with-code/index/figure-html/cell-2-output-1.png\n---\n\nThis is a post with executable code. Let's try some python.\n\n::: {.cell execution_count=1}\n\n::: {.cell-output .cell-output-display}\n![](index_files/figure-html/cell-2-output-1.png){width=571 height=411}\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\n|                                   | Pareto              | GPD                |\n|-----------------------------------|---------------------|--------------------|\n| 1. Infinite Mean and Variance     | $\\alpha \\leq 1$     | $\\xi \\geq 1$       |\n| 2. Finite Mean, Infinite Variance | $1 < \\alpha \\leq 2$ | $0.5 < \\xi \\leq 1$ |\n| 3. Finite Mean and Variance       | $\\alpha > 2$        | $\\xi \\leq 0.5$     |\n\n",
     "supporting": [
       "index_files"
     ],
