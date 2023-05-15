@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.353">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2023-05-13">
+
+<title>Sam Bailey | Data Science - Can we do better than the trimmed mean?</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../favicon.png" rel="icon" type="image/png">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,300;0,600;1,300;1,600&amp;family=JetBrains+Mono:ital,wght@0,200;0,600;1,200;1,600&amp;family=Roboto+Mono:ital,wght@0,300;0,600;1,300;1,600&amp;display=swap" rel="stylesheet">
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="floating nav-fixed slimcontent">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Sam Bailey | Data Science</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html" rel="" target="">
+ <span class="menu-text">Posts</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../publications.html" rel="" target="">
+ <span class="menu-text">Publications</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html" rel="" target="">
+ <span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/sam-bailey" rel="" target=""><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://www.linkedin.com/in/sam-bailey-data-scientist" rel="" target=""><i class="bi bi-linkedin" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+</ul>
+            <div class="quarto-navbar-tools">
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Contents</h2>
+   
+  <ul>
+  <li><a href="#a-day-in-the-life-of-a-data-scientist" id="toc-a-day-in-the-life-of-a-data-scientist" class="nav-link active" data-scroll-target="#a-day-in-the-life-of-a-data-scientist">A day in the life of a data scientist</a></li>
+  <li><a href="#outliers-in-ab-testing" id="toc-outliers-in-ab-testing" class="nav-link" data-scroll-target="#outliers-in-ab-testing">Outliers in A/B testing</a></li>
+  <li><a href="#extreme-value-theory-and-power-laws" id="toc-extreme-value-theory-and-power-laws" class="nav-link" data-scroll-target="#extreme-value-theory-and-power-laws">Extreme value theory and power laws</a>
+  <ul class="collapse">
+  <li><a href="#the-pareto-and-generalised-pareto-distributions" id="toc-the-pareto-and-generalised-pareto-distributions" class="nav-link" data-scroll-target="#the-pareto-and-generalised-pareto-distributions">The Pareto and Generalised Pareto distributions</a></li>
+  <li><a href="#infinite-variance" id="toc-infinite-variance" class="nav-link" data-scroll-target="#infinite-variance">Infinite Variance</a></li>
+  </ul></li>
+  <li><a href="#inference-about-the-mean-of-a-power-law-distribution" id="toc-inference-about-the-mean-of-a-power-law-distribution" class="nav-link" data-scroll-target="#inference-about-the-mean-of-a-power-law-distribution">Inference about the mean of a power law distribution</a>
+  <ul class="collapse">
+  <li><a href="#the-pareto-hill-estimator" id="toc-the-pareto-hill-estimator" class="nav-link" data-scroll-target="#the-pareto-hill-estimator">The Pareto (Hill) estimator</a></li>
+  <li><a href="#the-gpd-estimator" id="toc-the-gpd-estimator" class="nav-link" data-scroll-target="#the-gpd-estimator">The GPD estimator</a></li>
+  <li><a href="#how-do-these-estimators-perform" id="toc-how-do-these-estimators-perform" class="nav-link" data-scroll-target="#how-do-these-estimators-perform">How do these estimators perform?</a></li>
+  </ul></li>
+  <li><a href="#appling-extreme-value-theory-to-the-trimmed-mean" id="toc-appling-extreme-value-theory-to-the-trimmed-mean" class="nav-link" data-scroll-target="#appling-extreme-value-theory-to-the-trimmed-mean">Appling extreme value theory to the trimmed mean</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
+  <li><a href="#execution-details" id="toc-execution-details" class="nav-link" data-scroll-target="#execution-details">Execution Details</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+    </div>
+<!-- main -->
+<main class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">Can we do better than the trimmed mean?</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source" data-quarto-source-url="https://github.com/sam-bailey/sam-bailey.github.io/blob/master/posts/trimmed_mean_extreme_value_theory/index.qmd"><i class="bi"></i> Code</button></div></div>
+  <div class="quarto-categories">
+    <div class="quarto-category">Julia</div>
+    <div class="quarto-category">Experimentation</div>
+    <div class="quarto-category">Statistics</div>
+  </div>
+  </div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">May 13, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+<div>
+  <div class="abstract">
+    <div class="abstract-title">Abstract</div>
+    Testing out some ideas for dealing with outliers in A/B testing, comparing the trimmed / winsorized means with a new estimator based on a combination of the Pareto or Generalised Pareto distributions and the delta method.
+  </div>
+</div>
+
+</header>
+
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Post insipration
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This post was heavily inspired by the work by <span class="citation" data-cites="psis">Vehtari et al. (<a href="#ref-psis" role="doc-biblioref">2015</a>)</span> on Pareto Smoothed Importance Sampling, which tackles the related problem of how to deal with extreme values in importance sampling.</p>
+</div>
+</div>
+<section id="a-day-in-the-life-of-a-data-scientist" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="a-day-in-the-life-of-a-data-scientist">A day in the life of a data scientist</h2>
+<p>Picture the situation: you’re a data scientist / statistician / economist at an e-commerce company. You’re working with a team who plan to run an A/B test to evaluate the impact of a new feature or promoption, and critically they want to evaluate the impact of the change on <strong>revenue</strong>. Sounds easy, so you get to work!</p>
+<p>Your randomisation and analysis units are visitors, and since the goal is to measure the impact on total revenue, your main metric is revenue per visitor. You plan to perform a t-test against the null hypothesis that the average revenue per visitor is the same in both control and treatment, and if you reject the null hypothesis you’ll report the effect size, with a confidence interval, and pop the champaign!</p>
+<p>As a responsible experimenter, you kick things off with a power analysis, to estimate the required sample size you’ll need for this test. To do this you run a query to get the variance of the revenue per visitor over the last few weeks. And here, things start to go wrong… your variance is huge! At this rate, you’ll have to run your test for months in order to measure any reasonable effect.</p>
+<p>So now what? You plot a histogram of your revenue per visitor metric to see what’s going on, and you see something like this:</p>
+<div class="cell page-columns page-full" data-execution_count="2">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="6">
+<div id="fig-revenue-samples" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-revenue-samples-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;1: Hypothetical revenue per visitor histogram. Skewed, with lots of zeros on one side and a few massive outliers on the other side.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>And here’s the problem. The distribution of the metric is highly skewed, with lots of zeros, then some “normal” spenders, and then a very small number of extreme spenders - we’ll call these our outliers. And it’s these outliers that are disproportionatly increasing the variance of your average revenue per visitor estimate, hurting your power, and eventually making you wait months to estimate the impact of your experiment.</p>
+</section>
+<section id="outliers-in-ab-testing" class="level2">
+<h2 class="anchored" data-anchor-id="outliers-in-ab-testing">Outliers in A/B testing</h2>
+<p>The previous section was a hypothetical story, but I think it’s quite a common scenario. But what can be done? My usual steps are:</p>
+<ol type="1">
+<li>First, check if the outlieres are real. It’s often the case that outliers are actually just bad data, in which it might be reasonable to exclude them or fix them.</li>
+<li>Do some variance reduction! <a href="https://booking.ai/how-booking-com-increases-the-power-of-online-experiments-with-cuped-995d186fff1d">Cuped</a> is a very effective method of reducing the variance of your metric based on data from before the start of your experiment. It’s always worth trying and it’s about as close to a free lunch as you can get when it comes to improving A/B testing power. However, cuped reduces variance, not skew, so it’s likely your power will still be hindered by the outliers.</li>
+<li>If the previous two steps doesn’t reduce your variance sufficiently, then it’s time to look at trimming or windsorizing. These are very powerful techniques, but come with a large drawback: <strong>you are introducing bias into your estimates</strong>.</li>
+</ol>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Don’t log transform!!
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>On almost every blog I see, when the issue of a skewed metric arises, someone will recommend log-transforming the metric. While this will certainly make your metric less skewed, and may improve power, it’s a big no for financial metrics like revenue.</p>
+<p>This is because when you transform your metric, you also change the null hypothesis you are testing and therefore the interpretation of any effect you measure. For revenue, you really care about the effect on the <strong>(arithmetic) mean</strong> revenue per visitor, because improving this is what will translate into improving total revenue. However, the log transform means you are testing for an effect on the <strong>geometric mean</strong>, which is not the same and improving it does not necessarily translate into improving your bottom line, leading to potentially bad business decisions.</p>
+</div>
+</div>
+</div>
+<p>Trimming and windsorizing are specifically designed to deal with outliers and make your estimator more robust. With trimming, you filter out all samples that are above some threshold, while with windsorizing you apply a cap, so that all values above a threshold are capped to that threshold. Both are very effective at reducing variance, however because you are removing or capping the top X data points, you introruce a potentially large negative bias, so I usually treat it as a bit of a last resort.</p>
+<p>But is this the best we can do? In this post I’m going to explore how we might formalize this problem with extreme value theory, and see if we can find some estimators that perform better than the trimmed or winsorized means. Here, by “better”, I mean achieving similar levels of variance reduction, while introducing less bias.</p>
+</section>
+<section id="extreme-value-theory-and-power-laws" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="extreme-value-theory-and-power-laws">Extreme value theory and power laws</h2>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Disclamer
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>I’m far from an expert in extrme value theory, I’ve really only learned about the topic in the last few weeks. Take this section with a pinch of salt.</p>
+</div>
+</div>
+<p><em>Extreme value theory is a branch of statistics dealing with the extreme deviations from the median of probability distributions.</em><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> This is exactly what we are dealing with here - outliers are messing with our statistics. So perhaps there are some tools from extreme value theory that we can use to reduce the bias in our trimmed / winsorized mean? Say hello to the second theorem in extreme value theory:</p>
+<blockquote class="blockquote">
+<p><strong>Second Theorem in Extrme Value Theory</strong></p>
+<p>For a wide range of univariate probability distributions, the tail of that distribution can be well modelled by the Generalised Pareto distribution (GPD).</p>
+<p>– <em><span class="citation" data-cites="pickands1975statistical">Pickands III (<a href="#ref-pickands1975statistical" role="doc-biblioref">1975</a>)</span>, <span class="citation" data-cites="balkema1974residual">Balkema and De Haan (<a href="#ref-balkema1974residual" role="doc-biblioref">1974</a>)</span></em></p>
+</blockquote>
+<p>This sounds relavent! Perhaps we can describe the outliers in our skewed revenue distribution as a GPD. So what does a GPD look like?</p>
+<section id="the-pareto-and-generalised-pareto-distributions" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="the-pareto-and-generalised-pareto-distributions">The Pareto and Generalised Pareto distributions</h3>
+<p>The GPD is a more flexible version of the well known Pareto distribution <span class="citation" data-cites="powerlaws">(<a href="#ref-powerlaws" role="doc-biblioref">Newman 2005</a>)</span>, also known as the 80-20 rule. Both the GPD and Pareto distribution are characterized by having “power law” tails, where for large X the distribution tends towards:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20P%28x%29%20%5Crightarrow%20x%5E%7B-m%7D%20%5Cquad%20%5Ctext%7Bas%7D%20%5Cquad%20x%20%5Crightarrow%20%5Cinfty" alt="P(x) \rightarrow x^{-m} \quad \text{as} \quad x \rightarrow \infty" title="P(x) \rightarrow x^{-m} \quad \text{as} \quad x \rightarrow \infty" class="math display"></p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+The maths
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The probability density function of the Pareto distribution is given by: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20P_%5Ctext%7Bpareto%7D%28x%20%7C%20%5Calpha%2C%20%5Ctheta%29%20%3D%20%5Cfrac%7B%5Calpha%20%5Ctheta%5E%5Calpha%7D%7Bx%5E%7B%5Calpha-1%7D%7D" alt="P_\text{pareto}(x | \alpha, \theta) = \frac{\alpha \theta^\alpha}{x^{\alpha-1}}" title="P_\text{pareto}(x | \alpha, \theta) = \frac{\alpha \theta^\alpha}{x^{\alpha-1}}" class="math display"> This distribution has two parameters, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha" alt="\alpha" title="\alpha" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta" alt="\theta" title="\theta" class="math inline">:</p>
+<ul>
+<li><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta" alt="\theta" title="\theta" class="math inline"> controls the minimum of the distribution: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20x%20%5Cin%20%5B%5Ctheta%2C%20%5Cinfty%29" alt="x \in [\theta, \infty)" title="x \in [\theta, \infty)" class="math inline"></li>
+<li><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha" alt="\alpha" title="\alpha" class="math inline"> controls the slope of the distribution.</li>
+</ul>
+<p>The probability density function of the GPD is given by: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20P_%5Ctext%7BGPD%7D%28x%20%7C%20%5Cmu%2C%20%5Csigma%2C%20%5Cxi%29%20%3D%20%5Cfrac%7B1%7D%7B%5Csigma%7D%20%5Cleft%28%201%20%2B%20%5Cxi%20%5Cfrac%7Bx%20-%20%5Cmu%7D%7B%5Csigma%7D%20%5Cright%29%5E%7B-%281%2F%5Cxi%20%2B%201%29%7D" alt="P_\text{GPD}(x | \mu, \sigma, \xi) = \frac{1}{\sigma} \left( 1 + \xi \frac{x - \mu}{\sigma} \right)^{-(1/\xi + 1)}" title="P_\text{GPD}(x | \mu, \sigma, \xi) = \frac{1}{\sigma} \left( 1 + \xi \frac{x - \mu}{\sigma} \right)^{-(1/\xi + 1)}" class="math display"></p>
+<p>The parameters of this distribution are more complex. In this post I’m going to only look at cases where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cxi%20%3E%200" alt="\xi > 0" title="\xi > 0" class="math inline">. In this case:</p>
+<ul>
+<li><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu" alt="\mu" title="\mu" class="math inline"> controls the minimum of the distribution: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20x%20%5Cin%20%5B%5Cmu%2C%20%5Cinfty%29" alt="x \in [\mu, \infty)" title="x \in [\mu, \infty)" class="math inline"></li>
+<li><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Csigma" alt="\sigma" title="\sigma" class="math inline"> controls the scale of the distribution.</li>
+<li><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cxi" alt="\xi" title="\xi" class="math inline"> controls the slope of the power law tail of the distribution. Comparing it to <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha" alt="\alpha" title="\alpha" class="math inline"> for the Pareto distribution, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cxi%20%3D%201%20%2F%20%5Calpha" alt="\xi = 1 / \alpha" title="\xi = 1 / \alpha" class="math inline">.</li>
+</ul>
+<p>In the case where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu%20%3D%20%5Csigma%20%2F%20%5Cxi" alt="\mu = \sigma / \xi" title="\mu = \sigma / \xi" class="math inline"> the GPD is the same as the Pareto distributon.</p>
+</div>
+</div>
+</div>
+<p>You can see the power law tails in <a href="#fig-pareto">Figure&nbsp;2</a> below, where I compare the Pareto and GPD distribution with the log-normal distribution, which does not have a power law tail:</p>
+<div class="cell page-columns page-full" data-execution_count="3">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="7">
+<div id="fig-pareto" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-pareto-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;2: A comparison between the pareto distribution (red), the Generalised Pareto distribution (GPD) (blue), and the log-normal distribution (green). Both axes are log scaled. Pareto has parameters alpha=1.5 and theta=20. GPD has parameters mu=100.0, theta=20.0 and xi=2/3. Log-normal has parameters mu=4.5, sigma=1.0.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The distributions are plotted on a log-log scale, and you can see that both the Pareto and GPD distributions are linear for large values of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20x" alt="x" title="x" class="math inline"> (indicating a power law), while the LogNormal distribution never becomes linear, it is always curving downwards.</p>
+<p>The GPD and Pareto distribution differ at small values of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20x" alt="x" title="x" class="math inline">, where the GPD is more flexible and can curve up or down, while the Pareto distribution remains a pure power law for all values of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20x" alt="x" title="x" class="math inline">.</p>
+</section>
+<section id="infinite-variance" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="infinite-variance">Infinite Variance</h3>
+<p>Power law type distributions are interesting because depending on the slope of the tail, the population might have infinite mean or infinite variance. Specifically for the GPD and Pareto distributions we have the following three cases:</p>
+<div id="tbl-pareto-cases" class="anchored page-columns page-full">
+<table class="table">
+
+<colgroup>
+<col style="width: 46%">
+<col style="width: 27%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Pareto</th>
+<th>GPD</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1. Infinite Mean and Variance</td>
+<td><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha%20%5Cleq%201" alt="\alpha \leq 1" title="\alpha \leq 1" class="math inline"></td>
+<td><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cxi%20%5Cgeq%201" alt="\xi \geq 1" title="\xi \geq 1" class="math inline"></td>
+</tr>
+<tr class="even">
+<td>2. Finite Mean, Infinite Variance</td>
+<td><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%201%20%3C%20%5Calpha%20%5Cleq%202" alt="1 < \alpha \leq 2" title="1 < \alpha \leq 2" class="math inline"></td>
+<td><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%200.5%20%3C%20%5Cxi%20%5Cleq%201" alt="0.5 < \xi \leq 1" title="0.5 < \xi \leq 1" class="math inline"></td>
+</tr>
+<tr class="odd">
+<td>3. Finite Mean and Variance</td>
+<td><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha%20%3E%202" alt="\alpha > 2" title="\alpha > 2" class="math inline"></td>
+<td><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cxi%20%5Cleq%200.5" alt="\xi \leq 0.5" title="\xi \leq 0.5" class="math inline"></td>
+</tr>
+</tbody>
+</table>
+<div class="quarto-table-caption margin-caption">Table&nbsp;1: Three important scenarios for the sample mean and variance of the GPD and Pareto distributions.</div></div>
+<p><strong>But what does infinte mean or infinite variance really mean?</strong> The <em>sample</em> mean or variance is always finite, even if the population distribution from which that sample was drawn has infinite mean or variance. However, if the population distribution has infinite mean / variance, then the sample mean / variance will <em>not</em> converge as the sample size approaches infinty.</p>
+<p>This can be seen in <a href="#fig-inf-variance">Figure&nbsp;3</a> below, where I simulate estimating the sample variance as a function of sample size for the Log-Normal and GPD distributions, where the GPD distribution has infinite variance. Each grey line represents one sample, where I calculate the sample variance cumulatively, adding one point at a time.</p>
+<div class="cell page-columns page-full" data-execution_count="4">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="8">
+<div id="fig-inf-variance" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-inf-variance-output-1.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;3: The sample variance vs sample size for the GPD (left) and Log-Normal distribution (right). The GPD used here has infinite population variance, so the sample variance does not converge as sample size increases.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>You can see that for the log-normal distribution, as the sample size gets large the variance converges towards the population variance, while for the GPD distribution it does not converge, and instead just keeps increasing.</p>
+<p>This is a problem, because when performing inference about the mean via the t-test, we construct the t-statistic from the sample mean and sample variance. If, for example, we are performing a one-sample t-test to test the null hypothesis that the mean of the population distribution is equal to a specific value <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_0" alt="\mu_0" title="\mu_0" class="math inline">, we would calculate the t-statistic as:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20t%20%3D%20%5Cfrac%7B%5Chat%7B%5Cmu%7D%20-%20%5Cmu_0%7D%7B%5Chat%7B%5Csigma%7D%20%2F%20%5Csqrt%7Bn%7D%7D" alt="t = \frac{\hat{\mu} - \mu_0}{\hat{\sigma} / \sqrt{n}}" title="t = \frac{\hat{\mu} - \mu_0}{\hat{\sigma} / \sqrt{n}}" class="math display"></p>
+<p>Where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Cmu%7D" alt="\hat{\mu}" title="\hat{\mu}" class="math inline"> is the sample mean, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Csigma%7D%5E2" alt="\hat{\sigma}^2" title="\hat{\sigma}^2" class="math inline"> is the sample variance and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20n" alt="n" title="n" class="math inline"> is the sample size. Therefore, refering back to the three cases from <a href="#tbl-pareto-cases">Table&nbsp;1</a>:</p>
+<ul>
+<li>If we are in case (1) where both the mean and variance are infinite, then there is basically no hope for any inference about the mean, since it’s infinite! If you have a distribution with such large outliers that you are in this case, then you’ll always struggle to perform any inference about it’s mean. I’m not even sure what the interpretation of such an analysis would be…</li>
+<li>If we are in case (3) then both the mean and variance are finite. This is trivial, and it’s likely that the regular t-test based on the sample mean and variance will perform fine. Probably you’re data wouldn’t even look like it has significant outliers.</li>
+<li>Case (2) is the interesting one. The mean is finite, so we may want to perform inference on it, however the variance is infinite, which will break the t statisitc which uses the sample variance.</li>
+</ul>
+<p>So to summarise:</p>
+<ol type="1">
+<li>It’s common for the tails of a wide variety of distributions to be well described by the GPD distribution.</li>
+<li>Under certain conditions, the GPD distribution can have infinite variance but a finite mean.</li>
+<li>This would make any sample drawn from that distribution have a sample variance that does not converge as the sample size increases, and instead the variance will just increase as the sample size increases.</li>
+<li>This will break out t-statistic, which requires the sample variance.</li>
+</ol>
+<p>This sounds a lot like the situation we have with outliers in our revenue per visitor metric! Perhaps the tail of that distribution follows a power law, where we have infinite variance. This would explain why our variance is so large, and therefore why our experimental power is so poor!</p>
+</section>
+</section>
+<section id="inference-about-the-mean-of-a-power-law-distribution" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="inference-about-the-mean-of-a-power-law-distribution">Inference about the mean of a power law distribution</h2>
+<p>So if we cannot use the sample variance, what can we do? Well really we only use the sample variance so that we can estimated the standard error of the mean, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Csigma%7D_%5Cmu" alt="\hat{\sigma}_\mu" title="\hat{\sigma}_\mu" class="math inline">, as:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Cmu%20%3D%20%5Cfrac%7B%5Chat%7B%5Csigma%7D%7D%7B%5Csqrt%7Bn%7D%7D" alt="\hat{\sigma}_\mu = \frac{\hat{\sigma}}{\sqrt{n}}" title="\hat{\sigma}_\mu = \frac{\hat{\sigma}}{\sqrt{n}}" class="math display"></p>
+<p>Is there a way we can do this without the sample variance? Yes, with maximum likelihood estimation and the delta method! This approach takes three steps:</p>
+<ol type="1">
+<li>Assume a parametric distribution for your population</li>
+<li>Fit your distribution to your data using maximum likelihood estimation</li>
+<li>Calculate the mean and the standard error of the mean from your maximum likelihood fit. This requires calculating the hessian of the log-likelihood of your data, and using the delta method.</li>
+</ol>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Detailed method with maths
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<ol type="1">
+<li>You have a sample of size <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20n" alt="n" title="n" class="math inline">: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cleft%5B%20X_1%2C%20X_2%2C%20X_3%2C%20...%20X_n%20%5Cright%5D" alt="\left[ X_1, X_2, X_3, ... X_n \right]" title="\left[ X_1, X_2, X_3, ... X_n \right]" class="math inline"></li>
+<li>Assume a parametric distribution for your population: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20P%28x%7C%5Ctheta%29" alt="P(x|\theta)" title="P(x|\theta)" class="math inline">, where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta" alt="\theta" title="\theta" class="math inline"> is a vector of the parameters of the distribution.</li>
+<li>Define the Log Likelihood as: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20L%28%5Ctheta%29%20%3D%20%5Csum_%7Bj%3D1%7D%5En%20%5Cln%7B%28P%28X_j%7C%5Ctheta%29%29%7D" alt="L(\theta) = \sum_{j=1}^n \ln{(P(X_j|\theta))}" title="L(\theta) = \sum_{j=1}^n \ln{(P(X_j|\theta))}" class="math inline"></li>
+<li>Estimate <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Ctheta%7D" alt="\hat{\theta}" title="\hat{\theta}" class="math inline"> by maximizing <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20L%28%5Ctheta%29" alt="L(\theta)" title="L(\theta)" class="math inline">: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Ctheta%7D%20%3D%20%5Ctext%7Barg%20max%7D_%7B%5Ctheta%20%5Cin%20%5CTheta%7D%20L%28%5Ctheta%29" alt="\hat{\theta} = \text{arg max}_{\theta \in \Theta} L(\theta)" title="\hat{\theta} = \text{arg max}_{\theta \in \Theta} L(\theta)" class="math inline"></li>
+<li>Calculate the <a href="https://en.wikipedia.org/wiki/Hessian_matrix">hessian matrix</a> of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20L%28%5Ctheta%29" alt="L(\theta)" title="L(\theta)" class="math inline">, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20H%28%5Ctheta%29" alt="H(\theta)" title="H(\theta)" class="math inline">. This is the matrix of second derivatives of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20L" alt="L" title="L" class="math inline">.</li>
+<li>Use the hessian matrix to estimate the covariance matrix for the standard errors of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Ctheta%7D" alt="\hat{\theta}" title="\hat{\theta}" class="math inline"> as <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5CSigma%7D%20%3D%20-H%28%5Chat%7B%5Ctheta%7D%29%5E%7B-1%7D" alt="\hat{\Sigma} = -H(\hat{\theta})^{-1}" title="\hat{\Sigma} = -H(\hat{\theta})^{-1}" class="math inline">, from <span class="citation" data-cites="covmle">(<a href="#ref-covmle" role="doc-biblioref">Taboga 2021</a>)</span>.</li>
+<li>Estimate the maximum likelihood estimate of the mean from <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Ctheta%7D" alt="\hat{\theta}" title="\hat{\theta}" class="math inline">, based on the parametric form for the mean of your chosen distribution <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20P%28x%7C%5Ctheta%29" alt="P(x|\theta)" title="P(x|\theta)" class="math inline">: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Cmu%7D%20%3D%20E%28%5Chat%7B%5Ctheta%7D%29" alt="\hat{\mu} = E(\hat{\theta})" title="\hat{\mu} = E(\hat{\theta})" class="math inline">.</li>
+<li>Use the <a href="https://en.wikipedia.org/wiki/Delta_method">delta method</a> to estimate the standard error on the mean, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Csigma%7D_%5Cmu" alt="\hat{\sigma}_\mu" title="\hat{\sigma}_\mu" class="math inline">, where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5CDelta%20E%28%5Ctheta%29" alt="\Delta E(\theta)" title="\Delta E(\theta)" class="math inline"> is the first derivative (jacobian) of the mean function:</li>
+</ol>
+<p><span id="eq-delta-multivariate"><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Cmu%5E2%20%3D%20%5CDelta%20E%28%5Chat%7B%5Ctheta%7D%29%5ET%20%5Ccdot%20%5Chat%7B%5CSigma%7D%20%5Ccdot%20%5CDelta%20E%28%5Chat%7B%5Ctheta%7D%29%0A%20%5Cqquad%281%29" alt="\hat{\sigma}_\mu^2 = \Delta E(\hat{\theta})^T \cdot \hat{\Sigma} \cdot \Delta E(\hat{\theta})
+ \qquad(1)" title="\hat{\sigma}_\mu^2 = \Delta E(\hat{\theta})^T \cdot \hat{\Sigma} \cdot \Delta E(\hat{\theta})
+ \qquad(1)" class="math display"></span></p>
+<p>Note: if the parameters are all independent, meaning the covariance matrix is a diagonal matrix, then the above equation simplifies to:</p>
+<p><span id="eq-delta-indep"><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Cmu%5E2%20%3D%20%5Csum_i%20%5Cleft%7C%20%5Cfrac%7B%5Cpartial%20E%7D%7B%5Cpartial%20%5Ctheta_i%7D%20%5Cright%7C%5E2%20%5Chat%7B%5Csigma%7D_i%5E2%0A%20%5Cqquad%282%29" alt="\hat{\sigma}_\mu^2 = \sum_i \left| \frac{\partial E}{\partial \theta_i} \right|^2 \hat{\sigma}_i^2
+ \qquad(2)" title="\hat{\sigma}_\mu^2 = \sum_i \left| \frac{\partial E}{\partial \theta_i} \right|^2 \hat{\sigma}_i^2
+ \qquad(2)" class="math display"></span></p>
+<p>Where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Csigma_i%5E2" alt="\sigma_i^2" title="\sigma_i^2" class="math inline"> are the diagonal elements of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5CSigma%7D" alt="\hat{\Sigma}" title="\hat{\Sigma}" class="math inline">.</p>
+</div>
+</div>
+</div>
+<p>This method is nice because it doesn’t require us to estimate the sample variance at any point, so we are able to estimate the mean and standard error on the mean, even when the population variance is infinite!</p>
+<p>This method does, however, have some drawbacks - you need to make an assumption about the parameteric form of the population distribution, and if that is incorrect it’s very likely the estimator will be biased. Also, even if the parametric form is correctly specified, it’s usually the case that the maximum likelihood estimator is not unbiased by default, it usually requires some bias correction to achieve that. This goes beyond the scope of this blog post, but would certainly be possible to explore.</p>
+<p>Now let’s see how this will work with the GPD and Pareto distributions.</p>
+<section id="the-pareto-hill-estimator" class="level3">
+<h3 class="anchored" data-anchor-id="the-pareto-hill-estimator">The Pareto (Hill) estimator</h3>
+<p>While the more basic Pareto distribution might not have as much flexibility as the GPD, and therefore might not fit the tail of your distribution as well, the maximum likelihood estimate can be calculated analytically, making it much simpler and faster to implement.</p>
+<p>The maximum likelihood estimator of the Pareto distribution is often known as the Hill estimator, and the parameters are calculated as follows (see <span class="citation" data-cites="paretoest">Rytgaard (<a href="#ref-paretoest" role="doc-biblioref">1990</a>)</span> for the derivation):</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Ctheta%7D%20%3D%20%5Cmin%7B%28X_j%29%7D" alt="\hat{\theta} = \min{(X_j)}" title="\hat{\theta} = \min{(X_j)}" class="math display"> <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Calpha%7D%20%3D%20%5Cfrac%7Bn%7D%7B%5Csum_%7Bj%3D1%7D%5En%20%5Cln%7B%5Cfrac%7BX_j%7D%7B%5Chat%7B%5Ctheta%7D%7D%7D%7D%20%3D%20%5Cfrac%7Bn%7D%7B%5Cleft%28%20%5Csum_%7Bj%3D1%7D%5En%20%5Cln%7BX_j%7D%20%5Cright%29%20-%20n%20%5Cln%7B%5Chat%7B%5Ctheta%7D%7D%7D" alt="\hat{\alpha} = \frac{n}{\sum_{j=1}^n \ln{\frac{X_j}{\hat{\theta}}}} = \frac{n}{\left( \sum_{j=1}^n \ln{X_j} \right) - n \ln{\hat{\theta}}}" title="\hat{\alpha} = \frac{n}{\sum_{j=1}^n \ln{\frac{X_j}{\hat{\theta}}}} = \frac{n}{\left( \sum_{j=1}^n \ln{X_j} \right) - n \ln{\hat{\theta}}}" class="math display"></p>
+<p>The maximum likelihood estimator for the mean and standard error are then calculated from these parameters as:</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Derivation of the mean and standard error
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>The mean of the Pareto distribution is given by: <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cmu%28%5Ctheta%2C%20%5Calpha%29%20%3D%20%5Cfrac%7B%5Ctheta%20%5Calpha%7D%7B%5Calpha%20-%201%7D" alt="\mu(\theta, \alpha) = \frac{\theta \alpha}{\alpha - 1}" title="\mu(\theta, \alpha) = \frac{\theta \alpha}{\alpha - 1}" class="math display"></p>
+<p>The parameters are independent, so there is no covariance. Their standard errors are given by <span class="citation" data-cites="malik1970estimation">Malik (<a href="#ref-malik1970estimation" role="doc-biblioref">1970</a>)</span> (via <a href="https://en.wikipedia.org/wiki/Pareto_distribution#Estimation_of_parameters">wikipedia</a>) as:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Calpha%20%3D%20%5Cfrac%7B%5Chat%7B%5Calpha%7D%7D%7B%5Csqrt%7Bn%7D%7D" alt="\hat{\sigma}_\alpha = \frac{\hat{\alpha}}{\sqrt{n}}" title="\hat{\sigma}_\alpha = \frac{\hat{\alpha}}{\sqrt{n}}" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Ctheta%20%3D%20%5Cfrac%7B%5Ctheta%20%5Csqrt%7B%5Calpha%20n%7D%7D%7B%28%5Calpha%20n%20-%201%29%20%5Csqrt%7B%5Calpha%20n%20-%202%7D%7D%20%5Cunderset%7Bn%20%5Crightarrow%20%5Cinfty%7D%7B%5Capprox%7D%20%5Cfrac%7B%5Ctheta%7D%7B%5Calpha%20n%7D" alt="\hat{\sigma}_\theta = \frac{\theta \sqrt{\alpha n}}{(\alpha n - 1) \sqrt{\alpha n - 2}} \underset{n \rightarrow \infty}{\approx} \frac{\theta}{\alpha n}" title="\hat{\sigma}_\theta = \frac{\theta \sqrt{\alpha n}}{(\alpha n - 1) \sqrt{\alpha n - 2}} \underset{n \rightarrow \infty}{\approx} \frac{\theta}{\alpha n}" class="math display"></p>
+<p>We can calculate the standard error on the mean using <a href="#eq-delta-indep">Equation&nbsp;2</a>:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Cmu%5E2%20%3D%20%5Cleft%7C%20%5Cfrac%7B%5Cpartial%20%5Cmu%7D%7B%5Cpartial%20%5Calpha%7D%20%5Cright%7C%5E2%20%5Chat%7B%5Csigma%7D_%5Calpha%5E2%20%2B%20%5Cleft%7C%20%5Cfrac%7B%5Cpartial%20%5Cmu%7D%7B%5Cpartial%20%5Ctheta%7D%20%5Cright%7C%5E2%20%5Chat%7B%5Csigma%7D_%5Ctheta%5E2" alt="\hat{\sigma}_\mu^2 = \left| \frac{\partial \mu}{\partial \alpha} \right|^2 \hat{\sigma}_\alpha^2 + \left| \frac{\partial \mu}{\partial \theta} \right|^2 \hat{\sigma}_\theta^2" title="\hat{\sigma}_\mu^2 = \left| \frac{\partial \mu}{\partial \alpha} \right|^2 \hat{\sigma}_\alpha^2 + \left| \frac{\partial \mu}{\partial \theta} \right|^2 \hat{\sigma}_\theta^2" class="math display"></p>
+<p>The two derivatives are:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cfrac%7B%5Cpartial%20%5Cmu%7D%7B%5Cpartial%20%5Calpha%7D%20%3D%20%5Cfrac%7B-%5Ctheta%7D%7B%28%5Calpha%20-%201%29%5E2%7D" alt="\frac{\partial \mu}{\partial \alpha} = \frac{-\theta}{(\alpha - 1)^2}" title="\frac{\partial \mu}{\partial \alpha} = \frac{-\theta}{(\alpha - 1)^2}" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cfrac%7B%5Cpartial%20%5Cmu%7D%7B%5Cpartial%20%5Ctheta%7D%20%3D%20%5Cfrac%7B%5Calpha%7D%7B%28%5Calpha%20-%201%29%7D" alt="\frac{\partial \mu}{\partial \theta} = \frac{\alpha}{(\alpha - 1)}" title="\frac{\partial \mu}{\partial \theta} = \frac{\alpha}{(\alpha - 1)}" class="math display"></p>
+<p>So finally substituting it all in we can derive the following equation for the standard error on the mean:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Cmu%20%3D%20%7C%20%5Chat%7B%5Cmu%7D%20%7C%20%5Csqrt%7B%20%5Cfrac%7B1%7D%7Bn%28%5Calpha%20-%201%29%5E2%7D%20%2B%20%20%5Cfrac%7B1%7D%7B%5Calpha%5E2%20n%5E2%7D%20%7D" alt="\hat{\sigma}_\mu = | \hat{\mu} | \sqrt{ \frac{1}{n(\alpha - 1)^2} +  \frac{1}{\alpha^2 n^2} }" title="\hat{\sigma}_\mu = | \hat{\mu} | \sqrt{ \frac{1}{n(\alpha - 1)^2} +  \frac{1}{\alpha^2 n^2} }" class="math display"></p>
+</div>
+</div>
+</div>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bpareto%7D%20%3D%20%5Cfrac%7B%5Chat%7B%5Ctheta%7D%20%5Chat%7B%5Calpha%7D%7D%7B%5Chat%7B%5Calpha%7D%20-%201%7D" alt="\hat{\mu}_\text{pareto} = \frac{\hat{\theta} \hat{\alpha}}{\hat{\alpha} - 1}" title="\hat{\mu}_\text{pareto} = \frac{\hat{\theta} \hat{\alpha}}{\hat{\alpha} - 1}" class="math display"> <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%7B%5Cmu%2C%20%5Ctext%7Bpareto%7D%7D%20%3D%20%7C%20%5Chat%7B%5Cmu%7D%20%7C%20%5Csqrt%7B%20%5Cfrac%7B1%7D%7Bn%28%5Calpha%20-%201%29%5E2%7D%20%2B%20%20%5Cfrac%7B1%7D%7B%5Calpha%5E2%20n%5E2%7D%20%7D" alt="\hat{\sigma}_{\mu, \text{pareto}} = | \hat{\mu} | \sqrt{ \frac{1}{n(\alpha - 1)^2} +  \frac{1}{\alpha^2 n^2} }" title="\hat{\sigma}_{\mu, \text{pareto}} = | \hat{\mu} | \sqrt{ \frac{1}{n(\alpha - 1)^2} +  \frac{1}{\alpha^2 n^2} }" class="math display"></p>
+<p>This is implemented in Julia below:</p>
+<div class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">hill_estimator</span>(x<span class="op">::</span><span class="dt">Vector{Float64}</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="fu">length</span>(x)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Maximum likelihood estimates of the pareto parameters</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    θ <span class="op">=</span> <span class="fu">minimum</span>(x)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    α <span class="op">=</span> n <span class="op">/</span> (<span class="fu">sum</span>(<span class="fu">log</span>.(x)) <span class="op">-</span> n <span class="op">*</span> <span class="fu">log</span>(θ))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> α <span class="op">&lt;=</span> <span class="fl">1.0</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If alpha is less than 1, the mean is infinite. </span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># In this case this estimator won't work, so fall</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># back to the sample mean and variance.</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">sample_mean_variance_estimator</span>(x)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Estimate the mean and standard error from the MLE parameters</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    μ <span class="op">=</span> α <span class="op">*</span> θ <span class="op">/</span> (α <span class="op">-</span> <span class="fl">1</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    σ <span class="op">=</span> <span class="fu">abs</span>(μ) <span class="op">*</span> <span class="fu">sqrt</span>( <span class="fl">1</span> <span class="op">/</span> (n <span class="op">*</span> (α <span class="op">-</span> <span class="fl">1</span>)<span class="op">^</span><span class="fl">2</span>) <span class="op">+</span>  <span class="fl">1</span> <span class="op">/</span> (α <span class="op">*</span> n)<span class="op">^</span><span class="fl">2</span> )</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return a struct holding the estimated mean and standard error</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">EstimatorResult</span>(μ, σ) </span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="the-gpd-estimator" class="level3">
+<h3 class="anchored" data-anchor-id="the-gpd-estimator">The GPD estimator</h3>
+<p>For the GPD estimator it’s more complicated, because there is no closed form analytical solution to the maximum likelihood estimation. This is a well known challenge in extreme value theory and many methods have been proposed to fit the GPD to a sample.</p>
+<p>Here I will be using the method proposed by <span class="citation" data-cites="zhang2009new">Zhang and Stephens (<a href="#ref-zhang2009new" role="doc-biblioref">2009</a>)</span>, which was already implemented in the <code>ParetoSmooth.jl</code> package. I will then use the great automatic differentiation built into Julia in <code>ForwardDiff.jl</code> to estimate the gradient and hessian, which I use to estimate the standard error on the mean via <a href="#eq-delta-multivariate">Equation&nbsp;1</a>.</p>
+<p>The full implementation in Julia is here:</p>
+<div class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">ParetoSmooth</span>: gpd_fit</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">ForwardDiff</span>: gradient, hessian</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">gpd_log_pdf</span>(params<span class="op">::</span><span class="dt">AbstractVector</span>, x<span class="op">::</span><span class="dt">Vector{Float64}</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">logpdf</span>.(<span class="fu">GeneralizedPareto</span>(params<span class="op">...</span>), x))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">gpd_mean</span>(params<span class="op">::</span><span class="dt">AbstractVector</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(<span class="fu">GeneralizedPareto</span>(params<span class="op">...</span>))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">gpd_estimator</span>(x<span class="op">::</span><span class="dt">Vector{Float64}</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="fu">length</span>(x)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Estimate the GPD parameters numerically</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    u <span class="op">=</span> <span class="fu">minimum</span>(x)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    x_centered <span class="op">=</span> x <span class="op">.-</span> u</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    ξ, σ <span class="op">=</span> <span class="fu">gpd_fit</span>(x_centered, <span class="fl">1.0</span>; sort_sample<span class="op">=</span><span class="cn">true</span>, wip<span class="op">=</span><span class="cn">false</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    params <span class="op">=</span> [u, σ, ξ]</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> ξ <span class="op">&gt;=</span> <span class="fl">1.0</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If xi is greater than 1, the mean is infinite. </span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>        <span class="co"># In this case this estimator won't work, so fall</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="co"># back to the sample mean and variance.</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">sample_mean_variance_estimator</span>(x)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Perform the automatic differentiation to get the </span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># required gradient and hessian</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    H <span class="op">=</span> <span class="fu">hessian</span>(z <span class="op">-&gt;</span> <span class="fu">gpd_log_pdf</span>(z, x), params)</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    Σ <span class="op">=</span> (<span class="op">-</span><span class="fl">1</span> <span class="op">*</span> H) <span class="op">^</span> <span class="op">-</span><span class="fl">1</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    dμ <span class="op">=</span> <span class="fu">gradient</span>(gpd_mean, params)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Estimate the mean and the standard error</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    μ <span class="op">=</span> <span class="fu">gpd_mean</span>(params)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    v <span class="op">=</span> <span class="fu">transpose</span>(dμ) <span class="op">*</span> Σ <span class="op">*</span> dμ</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return a struct holding the estimated mean and standard error</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">EstimatorResult</span>(μ, <span class="fu">sqrt</span>(v))</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>As an aside, this really shows off some of the strengths of Julia - I was able to implement this quite complex method in such a short and easy to read piece of code. However, as it’s a numerical solution it will run slower and be less stable than the analytical Hill estimator for the Pareto distribution.</p>
+</section>
+<section id="how-do-these-estimators-perform" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="how-do-these-estimators-perform">How do these estimators perform?</h3>
+<p>To evaluate these estimators, I ran some simulations. First I simulated data coming from the Pareto and GPD distributions, with finite mean but infinite variance. Since I simulate this data I know the true population mean, so I can compare the estimators and see how well they do at estimating the population mean. I then repeat this process many times, each time collecting the estimated population mean and standard error.</p>
+<p>I compare three estimators:</p>
+<ol type="1">
+<li><strong>The sample mean / variance estimator.</strong> This is the standard method of estimating the population mean used in the t-test.</li>
+<li><strong>The Hill estimator.</strong> This is the maximum likelihood estimator based on the assumption that the data comes from a Pareto distribution.</li>
+<li><strong>The GPD estimator.</strong> This is the maximum likelihood estimator based on the assumption that the data comes from a GPD distribution.</li>
+</ol>
+<section id="testing-on-pareto-data" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="testing-on-pareto-data">Testing on Pareto data</h4>
+<p>First let’s look at how the estimators perform on data that came from a Pareto distribution. As expected, <a href="#fig-evt-estimator-comparison-pareto">Figure&nbsp;4</a> shows that the baseline method of using the sample mean doesn’t work well. It has skewed estimates, with high variance. However, both the hill estimator and the GPD estimator perform much better, with the estimates centered on the true population mean and with much lower variance.</p>
+<div class="cell page-columns page-full" data-execution_count="9">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="13">
+<div id="fig-evt-estimator-comparison-pareto" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-evt-estimator-comparison-pareto-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;4: Distribution of estimates for a Pareto population distribution, with alpha=1.5 and theta=20.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Now we can quantify the total error that the estimator makes as the mean squared error:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Ctext%7BMSE%7D%20%3D%20E%5B%28%5Chat%7B%5Cmu%7D%20-%20%5Cmu%29%5E2%5D" alt="\text{MSE} = E[(\hat{\mu} - \mu)^2]" title="\text{MSE} = E[(\hat{\mu} - \mu)^2]" class="math display"></p>
+<p>This is a convenient metric to use because we can break it down in terms of bias and variance:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Ctext%7Bbias%7D%20%3D%20%28E%5B%5Chat%7B%5Cmu%7D%5D%20-%20E%5B%5Cmu%5D%29%5E2" alt="\text{bias} = (E[\hat{\mu}] - E[\mu])^2" title="\text{bias} = (E[\hat{\mu}] - E[\mu])^2" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Ctext%7Bvariance%7D%20%3D%20E%5B%28%5Chat%7B%5Cmu%7D%20-%20E%5B%5Chat%7B%5Cmu%7D%5D%29%5E2%5D" alt="\text{variance} = E[(\hat{\mu} - E[\hat{\mu}])^2]" title="\text{variance} = E[(\hat{\mu} - E[\hat{\mu}])^2]" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Ctext%7BMSE%7D%20%3D%20%5Ctext%7Bbias%7D%20%2B%20%5Ctext%7Bvariance%7D" alt="\text{MSE} = \text{bias} + \text{variance}" title="\text{MSE} = \text{bias} + \text{variance}" class="math display"></p>
+<p>Below you can see how the bias, variance and MSE compare. In this case the bias is low for all methods, while the Hill estimator has the lowest variance and MSE, closely followed by the GPD estimator.</p>
+<div class="cell page-columns page-full" data-execution_count="10">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="14">
+<div id="fig-evt-estimator-stats-comparison-pareto" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-evt-estimator-stats-comparison-pareto-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;5: Average performance of estimators for a Pareto population distribution, with alpha=1.5 and theta=20. MSE is the Mean Squared Error of the estimates vs the true population mean, the variance is the variance of the estimates, and the bias is the squared difference between the average of the estimates and the true population mean. Ideally we want bias=0 and then MSE and variance as small as possible.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Finally, just having a good estimate of the mean is not enough - we need to be able to estimate the standard error on the mean reliably for the estimator to be useful for A/B testing.</p>
+<p>To validate whether the estimate of the standard error is good, I look at the distribution of standardised residuals, which is the difference between the estimated mean and the true population mean, divided by the standard error:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Ctext%7Bstandardised%20residual%7D%20%3D%20%5Cfrac%7B%5Chat%7B%5Cmu%7D%20-%20%5Cmu%7D%7B%5Chat%7B%5Csigma%7D_%5Cmu%7D" alt="\text{standardised residual} = \frac{\hat{\mu} - \mu}{\hat{\sigma}_\mu}" title="\text{standardised residual} = \frac{\hat{\mu} - \mu}{\hat{\sigma}_\mu}" class="math display"></p>
+<p>If the standard errors are good, the standardised residuals should roughly follow a t-distribution with mean = 0, standard deviation = 1 and degrees of freedom = n - 1.</p>
+<p>We see below that the Hill estimator is good for both sample sizes, while the GPD works well for the larger sample size, but is not as good for the small sample size. The sample mean and variance is poor, again showing the skewed shape.</p>
+<div class="cell page-columns page-full" data-execution_count="11">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="15">
+<div id="fig-evt-estimator-normed-comparison-pareto" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-evt-estimator-normed-comparison-pareto-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;6: A comparison of the standardised errors of the different estimators for a Pareto population distribution. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>So overall the Hill and GPD estimators work well for Pareto distributed data, with the Hill estimator performing slightly better. But this is expected, because the data was drawn from the Pareto distribution, which is exactly what the Hill estimator expects. So what happens if the data comes from a GPD distribution?</p>
+</section>
+<section id="testing-on-gpd-data" class="level4 page-columns page-full">
+<h4 class="anchored" data-anchor-id="testing-on-gpd-data">Testing on GPD data</h4>
+<p>Here I do the same analysis again, but this time using data coming from a GPD distribution for my testing. This distribution is more complex, so will be a harder test for the Hill estimator, as it breaks the parametric assumption we made.</p>
+<p>First looking at the distributions of the mean estimates, we see again that the mean / variance estimator is very skewed, and the GPD estimator looks good. However, this time the Hill estimator is <strong>very</strong> bad. It’s not skewed - the estimates have a nice, normally distributed shape, but they are not even nearly centered on the true population mean.</p>
+<div class="cell page-columns page-full" data-execution_count="12">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="16">
+<div id="fig-evt-estimator-comparison-gpd" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-evt-estimator-comparison-gpd-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;7: Distribution of estimates for a GPD population distribution, with mu=100, theta=20.0, xi=2/3.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>This is an example of the bias that can easily be introduced with this method. Becuase we made an assumption about the parametric form of the population distribution, and got that assumption wrong, the mean estimate is highly biased.</p>
+<p>You can see it clearly in the MSE and bias results in figure <a href="#fig-evt-estimator-stats-comparison-gpd">Figure&nbsp;8</a>. The hill estimator has low variance, but high bias, meaning that overall the MSE is much worse than the GPD estimator. Interestingly, even with this high bias it still has a lower MSE than the baseline sample mean / variance estimator, because the variance of the baseline mean/variance estimator is so high! This wouldn’t hold in general though, probably with a higher sample size or slightly different parameters the hill estimator would perform the worst of all.</p>
+<div class="cell page-columns page-full" data-execution_count="13">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="17">
+<div id="fig-evt-estimator-stats-comparison-gpd" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-evt-estimator-stats-comparison-gpd-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;8: Average performance of estimators for a GPD population distribution, with mu=100, theta=20.0, xi=2/3. MSE is the Mean Squared Error of the estimates vs the true population mean, the variance is the variance of the estimates, and the bias is the squared difference between the average of the estimates and the true population mean. Ideally we want bias=0 and then MSE and variance as small as possible.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Finally we can check the standardised residuals again, and as expected the hill estimator is far away from the expected t-distribution. THe GPD estimator again works best, closely matching the t-distribution for the larger sample size.</p>
+<div class="cell page-columns page-full" data-execution_count="14">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="18">
+<div id="fig-evt-estimator-normed-comparison-gpd" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-evt-estimator-normed-comparison-gpd-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;9: A comparison of the standardised errors of the different estimators for a GPD population distribution, where the standardised error is the difference between the estimated mean and the population mean, divided by the estimated standard deviation. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>So it seems that the GPD distribution works better in general, but if the assumptions of the hill estimator are met (i.e.&nbsp;the samples come from a Pareto distribution), then the hill estimator is better. Of course, the GPD estimator will fail in the same way that the hill estimator did if we were to test it on a dataset that breaks it’s assumptions, it’s just a more flexible distribution so its assumptions are less likely to break.</p>
+</section>
+</section>
+</section>
+<section id="appling-extreme-value-theory-to-the-trimmed-mean" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="appling-extreme-value-theory-to-the-trimmed-mean">Appling extreme value theory to the trimmed mean</h2>
+<p>Now as both the Hill estimator and GDP estimator outperform the simple mean/variance estimator for power-law type data, we can try to apply them to our revenue A/B testing problem. However, we want to use the new estimators <strong>only in the tail</strong>. The rest of the distribution is unlikely to be power-law distributed, so the new estimators would fail there.</p>
+<p>This is where the comparison with the trimmed and windsorised means comes in. In both of those methods, an arbitrary threshold is chosen, and all values that are above that threshold are designated as outliers and either ignored or capped. But what if we were to keep the outliers as they are, and use our new estimators on those, while the non-outliers are estimated by the regular mean-variance estimator. We can then combine the two estimates to get the overall estimate of the mean and the standard error for the whole sample.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Detailed method with maths
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<ol type="1">
+<li>Set the trimming quartile to split the data into “outliers” and “inliers”. This is an arbitrary percentile of the distribution, and typically only a small percentage of the data should be classified as outliers.</li>
+<li>Estimate the mean and standard error for the inliers and outliers separately. Now you should have the following stats:</li>
+</ol>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bout%7D%2C%20%5Chat%7B%5Csigma%7D_%7B%5Cmu%2C%20%5Ctext%7Bout%7D%7D%20%3D%20%5Ctext%7BEstimated%20mean%20and%20standard%20error%20for%20outliers.%7D" alt="\hat{\mu}_\text{out}, \hat{\sigma}_{\mu, \text{out}} = \text{Estimated mean and standard error for outliers.}" title="\hat{\mu}_\text{out}, \hat{\sigma}_{\mu, \text{out}} = \text{Estimated mean and standard error for outliers.}" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bin%7D%2C%20%5Chat%7B%5Csigma%7D_%7B%5Cmu%2C%20%5Ctext%7Bin%7D%7D%20%3D%20%5Ctext%7BEstimated%20mean%20and%20standard%20error%20for%20inliers.%7D" alt="\hat{\mu}_\text{in}, \hat{\sigma}_{\mu, \text{in}} = \text{Estimated mean and standard error for inliers.}" title="\hat{\mu}_\text{in}, \hat{\sigma}_{\mu, \text{in}} = \text{Estimated mean and standard error for inliers.}" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20w_%5Ctext%7Bin%7D%2C%20w_%5Ctext%7Bout%7D%20%3D%20%5Ctext%7BThe%20fraction%20of%20datapoints%20assigned%20to%20inliers%20%2F%20outliers.%7D" alt="w_\text{in}, w_\text{out} = \text{The fraction of datapoints assigned to inliers / outliers.}" title="w_\text{in}, w_\text{out} = \text{The fraction of datapoints assigned to inliers / outliers.}" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20n%20%3D%20%5Ctext%7BTotal%20number%20of%20datapoints%20in%20the%20sample.%7D" alt="n = \text{Total number of datapoints in the sample.}" title="n = \text{Total number of datapoints in the sample.}" class="math display"></p>
+<ol start="3" type="1">
+<li>Now we can combine the estimates to get the estimated mean and standard error for the whole sample. This method of combining the results together is built on top of the fact that the overall distribution can be thought of as a mixture of two distributions - the outliers and inliers. So we can combine the moments of the distribution as if they are a mixture (see <a href="https://en.wikipedia.org/wiki/Mixture_distribution#Moments">wikipedia</a>).</li>
+</ol>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Cmu%7D%20%3D%20w_%5Ctext%7Bin%7D%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bin%7D%20%2B%20w_%5Ctext%7Bout%7D%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bout%7D" alt="\hat{\mu} = w_\text{in} \hat{\mu}_\text{in} + w_\text{out} \hat{\mu}_\text{out}" title="\hat{\mu} = w_\text{in} \hat{\mu}_\text{in} + w_\text{out} \hat{\mu}_\text{out}" class="math display"></p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Chat%7B%5Csigma%7D_%5Cmu%20%3D%20%5Csqrt%7Bw_%5Ctext%7Bin%7D%5E2%20%5Chat%7B%5Csigma%7D_%7B%5Cmu%2C%20%5Ctext%7Bin%7D%7D%5E2%20%2B%20w_%5Ctext%7Bout%7D%5E2%20%5Chat%7B%5Csigma%7D_%7B%5Cmu%2C%20%5Ctext%7Bout%7D%7D%5E2%20%2B%20%5Cfrac%7Bw_%5Ctext%7Bin%7D%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bin%7D%5E2%20%2B%20w_%5Ctext%7Bin%7D%20%5Chat%7B%5Cmu%7D_%5Ctext%7Bin%7D%5E2%20-%20%5Chat%7B%5Cmu%7D%7D%7Bn%7D%7D" alt="\hat{\sigma}_\mu = \sqrt{w_\text{in}^2 \hat{\sigma}_{\mu, \text{in}}^2 + w_\text{out}^2 \hat{\sigma}_{\mu, \text{out}}^2 + \frac{w_\text{in} \hat{\mu}_\text{in}^2 + w_\text{in} \hat{\mu}_\text{in}^2 - \hat{\mu}}{n}}" title="\hat{\sigma}_\mu = \sqrt{w_\text{in}^2 \hat{\sigma}_{\mu, \text{in}}^2 + w_\text{out}^2 \hat{\sigma}_{\mu, \text{out}}^2 + \frac{w_\text{in} \hat{\mu}_\text{in}^2 + w_\text{in} \hat{\mu}_\text{in}^2 - \hat{\mu}}{n}}" class="math display"></p>
+<p>Note - the above equation for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Csigma%7D_%5Cmu" alt="\hat{\sigma}_\mu" title="\hat{\sigma}_\mu" class="math inline"> is slightly different to what you’ll see in wikipedia. This is because we are combining the standard error on the mean, not the standard deviations.</p>
+</div>
+</div>
+</div>
+<p>To test this out, I’ll create a synthetic dataset which is a mixture of a GPD and two lognormal distributions. This will make the main distribution bimodal (and so not too easy for our method) but with a power law tail that gives it infinite variance. This distribution is shown in <a href="#fig-samples">Figure&nbsp;10</a>.</p>
+<div class="cell page-columns page-full" data-execution_count="15">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="19">
+<div id="fig-samples" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-samples-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;10: Histogram of samples from simulated data (blue), and the theoretical PDF (orange).</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Again I perform very similar simulations to the previous section - estimating the MSE, variance, bias and the MSE of the standardised residuals. In an ideal world, the MSE and variance will be as low as possible, the bias will be 0, and the MSE of the standardised residuals will be as close to 1 as possible. I also calculate the coverage of 95% confidence intervals of the estimates, which is the percentage of times that the true population mean is within the 95% confdience intervals of the estimate. If the estimator is working well it should cover the true value 95% of the time. I calculate all these metrics as a function of the trimming quantile.</p>
+<p>Here I will compare the following estimators:</p>
+<ol type="1">
+<li><strong>The simple mean / variance estimator.</strong> This is the standard method of estimating the population mean used in the t-test. It is independent of the trimming quintile.</li>
+<li><strong>The trimmed mean / variance estimator.</strong> The data is trimmed at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are excluded.</li>
+<li><strong>The winsorized mean / variance estimator.</strong> The data is winsorized at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are capped at the trimming quintile.</li>
+<li><strong>The hill tail estimator.</strong> This estimator uses the hill estimator for the samples above the trimming quntile, and the sample mean / variance estimator for the samples below, and then merges the results together.</li>
+<li><strong>The GPD tail estimator.</strong> This estimator uses the GPD estimator for the samples above the trimming quntile, and the sample mean / variance estimator for the samples below, and then merges the results together.</li>
+</ol>
+<p>The simulation results are shown below in <a href="#fig-trimming-sim-by-metric">Figure&nbsp;11</a>.</p>
+<div class="cell page-columns page-full" data-execution_count="17">
+<div class="cell-output cell-output-display page-columns page-full" data-execution_count="21">
+<div id="fig-trimming-sim-by-metric" class="quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="figure page-columns page-full">
+<p><img src="index_files/figure-html/fig-trimming-sim-by-metric-output-1.svg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption margin-caption">Figure&nbsp;11: Performance of the different trimming methods based on various metrics. The MSE and variance should be as small as possible. The Bias should be as close to 0.0 as possible, the Standardised MSE should be 1.0 and the 95% coverage should be 0.95.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>These results are interesting and in my opinion very promising for this approach!</p>
+<ul>
+<li>The simple mean is the least biased of all the methods, but does not have good coverage of standardised MSE, indicating that the confidence intervals would not work well for this estimator, breaking our A/B tests.</li>
+<li>The trimmed and winsorized means both behave as expected. The more we trim, the bias increases, and the variance decreases. Overall, the increase in bias is larger than the decrease in variance, meaning that the MSE gets worse. And the bias is so large that the coverage is terrible - the confidence intervals never contain the true population mean. This demonstrates why the trimmed and winsorized means are so difficult to use, because while the variance decreases, you introduce significant bias.</li>
+<li>Our new estimators seem to work well, as long as the trimming quntile is not too large. Both have good coverage and standardised MSE, meaning that can be more reliably used as A/B testing metrics. The variance, bias and MSE are closer to the values for the simple mean. This means we get similar performance on average, but with a better behaved estimator that we can construct reliable confidence intervals for.</li>
+<li>The hill tail estimator works better than the GPD tail estimator as long as the trimming quintile is kept below ~1%. Above that, the coverage of the hill estimator deteriorates, while the GPD tail estimator maintains its coverage until ~10%. This is expected because the GPD tail estimator is a more general distribution, so can describe a bigger portion of the tail which is not exactly Pareto distributed.</li>
+<li>The GPD tail estimator is less robust. This is likely because of the numerical estimation method. Between 1% and 10% the variance, bias and MSE go extremely high.</li>
+</ul>
+<p>Overall, based on this, I think the hill estimator has the most promise. While it breaks down at high trimming quantiles, as long as the correct trimming quantile is chosen it works well. It is also computationally simpler than the GPD estimator, because it has an analytical soltuion.</p>
+</section>
+<section id="summary" class="level2">
+<h2 class="anchored" data-anchor-id="summary">Summary</h2>
+<p>So it looks like we might be able to do better than the trimmed or winsorized means! This is still early stages, more work needs to be done to test this, but overall the hill-tail estimator has better coverage than the regular sample mean, while maintaining a good level of bias and variance.</p>
+<p>Some interesting next steps would be to select the trimming quantile automatically, for example using a similar method to <span class="citation" data-cites="powerlawsempirical">Clauset, Shalizi, and Newman (<a href="#ref-powerlawsempirical" role="doc-biblioref">2009</a>)</span>, as the hill estimator is very sensitive to this choice, or exploring bias corrections to the MLE estimates.</p>
+</section>
+<section id="execution-details" class="level2">
+<h2 class="anchored" data-anchor-id="execution-details">Execution Details</h2>
+<div class="cell" data-execution_count="18">
+<div class="cell-output cell-output-stdout">
+<pre><code>Installed packages:
+StatsPlots (</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.15.5)
+ParetoSmooth (0.7.4)
+LaTeXStrings (1.3.0)
+ForwardDiff (0.10.35)
+Distributions (0.25.92)
+StatsBase (0.33.21)
+
+Execution time: </code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>10 minutes, 15 seconds, 685 milliseconds</code></pre>
+</div>
+</div>
+
+
+
+</section>
+
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-balkema1974residual" class="csl-entry" role="listitem">
+Balkema, August A, and Laurens De Haan. 1974. <span>“Residual Life Time at Great Age.”</span> <em>The Annals of Probability</em> 2 (5): 792–804.
+</div>
+<div id="ref-powerlawsempirical" class="csl-entry" role="listitem">
+Clauset, Aaron, Cosma Rohilla Shalizi, and M. E. J. Newman. 2009. <span>“Power-Law Distributions in Empirical Data.”</span> <em>SIAM Review</em> 51 (4): 661–703. <a href="https://doi.org/10.1137/070710111">https://doi.org/10.1137/070710111</a>.
+</div>
+<div id="ref-malik1970estimation" class="csl-entry" role="listitem">
+Malik, Henrick John. 1970. <span>“Estimation of the Parameters of thePareto Distribution.”</span> <em>Metrika</em> 15 (1): 126–32.
+</div>
+<div id="ref-powerlaws" class="csl-entry" role="listitem">
+Newman, MEJ. 2005. <span>“Power Laws, Pareto Distributions and Zipf<span></span>s Law.”</span> <em>Contemporary Physics</em> 46 (5): 323–51. <a href="https://doi.org/10.1080/00107510500052444">https://doi.org/10.1080/00107510500052444</a>.
+</div>
+<div id="ref-pickands1975statistical" class="csl-entry" role="listitem">
+Pickands III, James. 1975. <span>“Statistical Inference Using Extreme Order Statistics.”</span> <em>The Annals of Statistics</em>, 119–31.
+</div>
+<div id="ref-paretoest" class="csl-entry" role="listitem">
+Rytgaard, Mette. 1990. <span>“Estimation in the Pareto Distribution.”</span> <em>ASTIN Bulletin: The Journal of the IAA</em> 20 (2): 201–16.
+</div>
+<div id="ref-covmle" class="csl-entry" role="listitem">
+Taboga, Marco. 2021. <span>“Covariance Matrix of the Maximum Likelihood Estimator.”</span> Lectures on probability theory and mathematical statistics. Online Appendix. Kindle Direct Publishing. <a href="https://www.statlect.com/fundamentals-of-statistics/maximum-likelihood-covariance-matrix-estimation">https://www.statlect.com/fundamentals-of-statistics/maximum-likelihood-covariance-matrix-estimation</a>.
+</div>
+<div id="ref-psis" class="csl-entry" role="listitem">
+Vehtari, Aki, Daniel Simpson, Andrew Gelman, Yuling Yao, and Jonah Gabry. 2015. <span>“Pareto Smoothed Importance Sampling.”</span> arXiv. <a href="https://doi.org/10.48550/ARXIV.1507.02646">https://doi.org/10.48550/ARXIV.1507.02646</a>.
+</div>
+<div id="ref-zhang2009new" class="csl-entry" role="listitem">
+Zhang, Jin, and Michael A Stephens. 2009. <span>“A New and Efficient Estimation Method for the Generalized Pareto Distribution.”</span> <em>Technometrics</em> 51 (3): 316–25.
+</div>
+</div></section><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Sorry, this definition is fully plagarised from <a href="https://en.wikipedia.org/wiki/Extreme_value_theory#:~:text=Extreme%20value%20theory%20or%20extreme,extreme%20than%20any%20previously%20observed.">Wikipedia</a>, but it sounds relevant!<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  const viewSource = window.document.getElementById('quarto-view-source') ||
+                     window.document.getElementById('quarto-code-tools-source');
+  if (viewSource) {
+    const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+    viewSource.addEventListener("click", function(e) {
+      if (sourceUrl) {
+        // rstudio viewer pane
+        if (/\bcapabilities=\b/.test(window.location)) {
+          window.open(sourceUrl);
+        } else {
+          window.location.href = sourceUrl;
+        }
+      } else {
+        const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+        modal.show();
+      }
+      return false;
+    });
+  }
+  function toggleCodeHandler(show) {
+    return function(e) {
+      const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+      for (let i=0; i<detailsSrc.length; i++) {
+        const details = detailsSrc[i].parentElement;
+        if (show) {
+          details.open = true;
+        } else {
+          details.removeAttribute("open");
+        }
+      }
+      const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+      const fromCls = show ? "hidden" : "unhidden";
+      const toCls = show ? "unhidden" : "hidden";
+      for (let i=0; i<cellCodeDivs.length; i++) {
+        const codeDiv = cellCodeDivs[i];
+        if (codeDiv.classList.contains(fromCls)) {
+          codeDiv.classList.remove(fromCls);
+          codeDiv.classList.add(toCls);
+        } 
+      }
+      return false;
+    }
+  }
+  const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+  if (hideAllCode) {
+    hideAllCode.addEventListener("click", toggleCodeHandler(false));
+  }
+  const showAllCode = window.document.getElementById("quarto-show-all-code");
+  if (showAllCode) {
+    showAllCode.addEventListener("click", toggleCodeHandler(true));
+  }
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var filterRegex = new RegExp("https:\/\/sambailey\.me");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+          // target, if specified
+          link.setAttribute("target", "_blank");
+      }
+    }
+});
+</script>
+<script src="https://utteranc.es/client.js" repo="sam-bailey/blogComments" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
+</script>
+</div> <!-- /content -->
+
+
+
+<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

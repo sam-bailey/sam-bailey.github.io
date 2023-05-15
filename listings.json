@@ -2,8 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
-      "/posts/post-with-code/index.html",
-      "/posts/outliers-for-ab-testing/index.html",
+      "/posts/trimmed_mean_extreme_value_theory/index.html",
       "/posts/welcome/index.html"
     ]
   }
