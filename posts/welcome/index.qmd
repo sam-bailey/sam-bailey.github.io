@@ -1,10 +1,20 @@
 ---
-title: "Welcome To My Blog"
-date: "2022-12-05"
+title: "How I'm Breaking All the Rules with My Infrequent, Long-Winded Data Science Blog"
+date: "2023-05-01"
 ---
-
-This is the first post in a Quarto blog. Welcome!
 
 ![](thumbnail.jpg)
 
-Since this post doesn't specify an explicit `image`, the first image in the post will be used in the listing page of posts.
+Welcome to my data science blog, where I explore topics that I find interesting and hope you will too!
+
+Now, I know what you're thinking - "Another data science blog? What makes this one so special?" Well, for starters, I'm doing the complete opposite of what you're supposed to do when creating a blog.
+
+Firstly, I won't be posting regularly, so don't hold your breath for a new post every week. Secondly, I won't be optimizing for SEO because let's face it, I don't even know what that means. And lastly, my posts won't be short and sweet - they might be a bit long and tedious, but hey, that's the price of digging deep into a topic.
+
+So what will I be doing, you ask? Well, each post will be a Jupyter notebook compiled into a website with [Quarto](https://quarto.org/), where I'll be doing analysis and writing simulations. That's right - no fluff pieces or hot takes here, just cold, hard data.
+
+Now, I must emphasize that nothing is peer-reviewed, so if you try something out from my blog and it all goes wrong, well, that's on you my friend. Do your own research and don't blame me.
+
+So join me on this unconventional journey into the world of data science, where we throw caution to the wind and explore the topics that we find interesting, no matter how infrequent or long-winded they may be.
+
+<sub><sup>This text was written by [ChatGPT](https://chat.openai.com), after I gave it the talking points.</sup></sub>

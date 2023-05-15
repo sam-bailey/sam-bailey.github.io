@@ -1,12 +1,12 @@
 ---
-title: "Improving the Trimmed Mean with Extreme Value Theory"
-date: "2022-12-08"
+title: "Can we do better than the trimmed mean?"
+date: "2023-05-13"
 categories: [Julia, Experimentation, Statistics]
 image: ../../_freeze/posts/trimmed_mean_extreme_value_theory/index/figure-html/fig-samples-output-1.svg
 jupyter: "julia-1.8"
 bibliography: references.bib
 cap-location: margin
-abstract: Testing out some ideas for dealing with outliers in A/B testing, comparing the trimmed/windsorized means with a new estimator based on a combination of the pareto or generalised pareto distributions and the delta method.
+abstract: Testing out some ideas for dealing with outliers in A/B testing, comparing the trimmed / winsorized means with a new estimator based on a combination of the Pareto or Generalised Pareto distributions and the delta method.
 ---
 
 ```{julia}
@@ -15,27 +15,37 @@ abstract: Testing out some ideas for dealing with outliers in A/B testing, compa
 
 using Pkg
 
-Pkg.activate("./posts/trimmed_mean_extreme_value_theory")
+# Pkg.activate("./posts/trimmed_mean_extreme_value_theory")
+Pkg.activate("./")
 
 Pkg.add([
 	"Random",
-	"Distributions",
+	"StatsBase",
 	"StatsPlots",
 	"LaTeXStrings",
 	"ParetoSmooth",
-	"ForwardDiff"
+	"ForwardDiff",
+	"Distributions"
 ])
 
-using Random, Distributions, StatsPlots, LaTeXStrings
+using Random, Distributions, StatsPlots, LaTeXStrings, Dates
 
 Random.seed!(123);
+
+START_TIME = now() # Used for timing the whole execution.
 ```
 
-## A day in the life of an experimentation practitioner
+::: {.callout-tip}
+## Post insipration
 
-Picture the situation: you're a data scientist / statistician / economist at some e-commerce company. You're working with a team who need to test the impact of some new feature or promoption, and critically they want to evaluate the impact of the change on **revenue**. Sounds easy, so you get to work! 
+This post was heavily inspired by the work by @psis on Pareto Smoothed Importance Sampling, which tackles the related problem of how to deal with extreme values in importance sampling.
+:::
 
-Your randomisation and analysis units are visitors, and since the goal is to measure the impact on total revenue, your main metric is revenue per visitor. You will perform a t-test against the null hypothesis that the average revenue per visitor is the same in both control and treatment, and if you reject the null hypothesis you'll report the Average Treatment Effect (ATE), with a confidence interval, and pop the champaign!
+## A day in the life of a data scientist
+
+Picture the situation: you're a data scientist / statistician / economist at an e-commerce company. You're working with a team who plan to run an A/B test to evaluate the impact of a new feature or promoption, and critically they want to evaluate the impact of the change on **revenue**. Sounds easy, so you get to work! 
+
+Your randomisation and analysis units are visitors, and since the goal is to measure the impact on total revenue, your main metric is revenue per visitor. You plan to perform a t-test against the null hypothesis that the average revenue per visitor is the same in both control and treatment, and if you reject the null hypothesis you'll report the effect size, with a confidence interval, and pop the champaign!
 
 As a responsible experimenter, you kick things off with a power analysis, to estimate the required sample size you'll need for this test. To do this you run a query to get the variance of the revenue per visitor over the last few weeks. And here, things start to go wrong... your variance is huge! At this rate, you'll have to run your test for months in order to measure any reasonable effect. 
 
@@ -43,7 +53,7 @@ So now what? You plot a histogram of your revenue per visitor metric to see what
 
 ```{julia}
 #| label: fig-revenue-samples
-#| fig-cap: "Hypothetical revenue per visitor histogram. Skewed, ;ots of zeros on one side. Massive outliers on the other side."
+#| fig-cap: "Hypothetical revenue per visitor histogram. Skewed, with lots of zeros on one side and a few massive outliers on the other side."
 
 data_dist = MixtureModel(
 	[
@@ -70,46 +80,50 @@ And here's the problem. The distribution of the metric is highly skewed, with lo
 
 The previous section was a hypothetical story, but I think it's quite a common scenario. But what can be done? My usual steps are:
 
-1. First, check if they are real! It's often the case that outliers are actually just bad data. Before continuing, do some exploratory analysis to identify where these outliers are coming from and if they are real.
-1. Do some variance reduction! [CUPED](https://booking.ai/how-booking-com-increases-the-power-of-online-experiments-with-cuped-995d186fff1d) is a very effective method of reducing variance based on data from before the start of your experiment. It's always worth trying and it's about as close to a free lunch as you can get when it comes to improving A/B testing sensitivity. However, if your metric is skewed or has severe outliers, it's likely that CUPED won't solve that, and your power will still be limited by the outliers.
-1. If CUPED doesn't reduce your variance sufficiently, then it's time to look at trimming or windsorizing. These are very powerful techniques, but come with a significant drawback -> you are introducing bias into your estimates. 
+1. First, check if the outlieres are real. It's often the case that outliers are actually just bad data, in which it might be reasonable to exclude them or fix them.
+1. Do some variance reduction! [Cuped](https://booking.ai/how-booking-com-increases-the-power-of-online-experiments-with-cuped-995d186fff1d) is a very effective method of reducing the variance of your metric based on data from before the start of your experiment. It's always worth trying and it's about as close to a free lunch as you can get when it comes to improving A/B testing power. However, cuped reduces variance, not skew, so it's likely your power will still be hindered by the outliers.
+1. If the previous two steps doesn't reduce your variance sufficiently, then it's time to look at trimming or windsorizing. These are very powerful techniques, but come with a large drawback: **you are introducing bias into your estimates**. 
 
 ::: {.callout-warning collapse="true"}
 ## Don't log transform!!
 
-On almost every blog I see, when the issue of a skewed metric arises, someone will recommend to log-transform the metric. While this will certainly make your metric less skewed, and sometimes make sense, it's a big no-no for financial metrics like revenue. 
+On almost every blog I see, when the issue of a skewed metric arises, someone will recommend log-transforming the metric. While this will certainly make your metric less skewed, and may improve power, it's a big no for financial metrics like revenue. 
 
 This is because when you transform your metric, you also change the null hypothesis you are testing and therefore the interpretation of any effect you measure. For revenue, you really care about the effect on the **(arithmetic) mean** revenue per visitor, because improving this is what will translate into improving total revenue. However, the log transform means you are testing for an effect on the **geometric mean**, which is not the same and improving it does not necessarily translate into improving your bottom line, leading to potentially bad business decisions.
 :::
 
-Trimming and windsorizing are specifically designed to deal with outliers and make your estimator more robust. With trimming, you filter out all samples that are above some threshold, while with windsorizing you apply a cap, so that all values above a threshold are capped to that threshold. Both are very effective at reducing  variance, however they also introduce some bias, because you are biasedly removing or capping the top X data points, negatively biasing your estimates.
+Trimming and windsorizing are specifically designed to deal with outliers and make your estimator more robust. With trimming, you filter out all samples that are above some threshold, while with windsorizing you apply a cap, so that all values above a threshold are capped to that threshold. Both are very effective at reducing  variance, however because you are removing or capping the top X data points, you introruce a potentially large negative bias, so I usually treat it as a bit of a last resort.
 
-But is this the best we can do? In this post I'm going to explore how we might formalize this problem with Extreme Value Theory (EVT), and see if we can find some estimators that perform better than the trimmed or windsorized means. Here, by "better", I mean achieving similar levels of variance reduction, while introducing less bias.
+But is this the best we can do? In this post I'm going to explore how we might formalize this problem with extreme value theory, and see if we can find some estimators that perform better than the trimmed or winsorized means. Here, by "better", I mean achieving similar levels of variance reduction, while introducing less bias.
 
-::: {.callout-tip}
-## Inspiration for this post
-
-This work was heavily inspired by the work by @psis on Pareto Smoothed Importance Sampling, which tackles the related problem of how to deal with extreme values in importance sampling.
-:::
-
-## Extreme Value Theory (EVT) and power laws
+## Extreme value theory and power laws
 
 ::: {.callout-warning}
 ## Disclamer 
 
-I'm far from an expert in EVT. When writing this post, I started out experimeting with different ways to improve the trimmed mean, and in that process discovered EVT. So what I'm writing here is basically me parroting the things I've read over the last few weeks. Take it with a pinch of salt.
+I'm far from an expert in extrme value theory, I've really only learned about the topic in the last few weeks. Take this section with a pinch of salt. 
 :::
 
-First, what is EVT? *EVT is a branch of statistics dealing with the extreme deviations from the median of probability distributions.*^[Sorry, this definition is fully plagarised from [Wikipedia](https://en.wikipedia.org/wiki/Extreme_value_theory#:~:text=Extreme%20value%20theory%20or%20extreme,extreme%20than%20any%20previously%20observed.), but it's good!] This is exactly what we are dealing with here - outliers are messing with our statistics. So perhaps there are some tools from EVT that we can use to reduce the bias in our trimmed / windsorized mean?
+*Extreme value theory is a branch of statistics dealing with the extreme deviations from the median of probability distributions.*^[Sorry, this definition is fully plagarised from [Wikipedia](https://en.wikipedia.org/wiki/Extreme_value_theory#:~:text=Extreme%20value%20theory%20or%20extreme,extreme%20than%20any%20previously%20observed.), but it sounds relevant!] This is exactly what we are dealing with here - outliers are messing with our statistics. So perhaps there are some tools from extreme value theory that we can use to reduce the bias in our trimmed / winsorized mean? Say hello to the second theorem in extreme value theory:
 
-### The pareto and generalised pareto distributions
+> **Second Theorem in Extrme Value Theory**
+> 
+> For a wide range of univariate probability distributions, the tail of that distribution can be well modelled by the Generalised Pareto distribution (GPD).
+> 
+> -- *@pickands1975statistical, @balkema1974residual*
 
-In EVT the X theorem states that for a wide range of univariate probability distributions, the tail of that distribution can be well modelled by the Generalised Pareto Distribution (GPD). The GPD is a more flexible version of the well known Pareto distribution [@powerlaws]. 
+This sounds relavent! Perhaps we can describe the outliers in our skewed revenue  distribution as a GPD. So what does a GPD look like? 
 
-If this is true, then perhaps we can model 
+### The Pareto and Generalised Pareto distributions
+
+The GPD is a more flexible version of the well known Pareto distribution [@powerlaws], also known as the 80-20 rule. Both the GPD and Pareto distribution are characterized by having "power law" tails, where for large X the distribution tends towards:
+
+$$
+P(x) \rightarrow x^{-m} \quad \text{as} \quad x \rightarrow \infty
+$$
 
 ::: {.callout-tip collapse="true"}
-## GPD and Pareto Distributions
+## The maths
 
 The probability density function of the Pareto distribution is given by:
 $$
@@ -134,17 +148,11 @@ The parameters of this distribution are more complex. In this post I'm going to 
 In the case where $\mu = \sigma / \xi$ the GPD is the same as the Pareto distributon.
 :::
 
-Both the GPD and Pareto distribution are characterized by having "power law" tails, where for large X the distribution tends towards:
-
-$$
-P(x) \rightarrow x^{-m} \quad \text{as} \quad x \rightarrow \infty
-$$
-
-You can see this in @fig-pareto below, where I compare the Pareto and GPD distribution with the LogNormal distribution, that does not have a power law tail:
+You can see the power law tails in @fig-pareto below, where I compare the Pareto and GPD distribution with the log-normal distribution, which does not have a power law tail:
 
 ```{julia}
 #| label: fig-pareto
-#| fig-cap: "A comparison between the pareto distribution (red), the Generalised Pareto Distribution (GPD) (blue), and the log-normal distribution (green). Both axes are log scaled. Pareto has parameters alpha=1.5 and theta=20. GPD has parameters mu=100.0, theta=20.0 and xi=2/3. LogNormal has parameters mu=4.5, sigma=1.0."
+#| fig-cap: "A comparison between the pareto distribution (red), the Generalised Pareto distribution (GPD) (blue), and the log-normal distribution (green). Both axes are log scaled. Pareto has parameters alpha=1.5 and theta=20. GPD has parameters mu=100.0, theta=20.0 and xi=2/3. Log-normal has parameters mu=4.5, sigma=1.0."
 
 gpd = GeneralizedPareto(100.0, 20.0, 1.0 / 1.5)
 pd = Pareto(1.5, 20.0)
@@ -162,15 +170,7 @@ The GPD and Pareto distribution differ at small values of $x$, where the GPD is 
 
 ### Infinite Variance
 
-When performing inference about the mean via the t-test, we typically use the first two moments: the sample mean and sample variance. If, for example, we are performing a one-sample t-test to test the null hypothesis that the mean of the population distribution is equal to a specific value $\mu_0$, we would calculate the t-statistic as:
-
-$$
-t = \frac{\hat{\mu} - \mu_0}{\hat{\sigma} / \sqrt{n}}
-$$
-
-Where $\hat{\mu}$ is the sample mean, $\hat{\sigma}^2$ is the sample variance and $n$ is the sample size.
-
-Distributions with power law tails present a challenge here though, because depending on the slope of the tail, the population might have infinite mean or infinite variance. Specifically for the GPD and Pareto distributions we have the following three cases:
+Power law type distributions are interesting because depending on the slope of the tail, the population might have infinite mean or infinite variance. Specifically for the GPD and Pareto distributions we have the following three cases:
 
 |                                   | Pareto              | GPD                |
 |-----------------------------------|---------------------|--------------------|
@@ -178,13 +178,11 @@ Distributions with power law tails present a challenge here though, because depe
 | 2. Finite Mean, Infinite Variance | $1 < \alpha \leq 2$ | $0.5 < \xi \leq 1$ |
 | 3. Finite Mean and Variance       | $\alpha > 2$        | $\xi \leq 0.5$     |
 
-* If we are in case (1) where both the mean and variance are infinite, then there is basically no hope for any inference about the mean, since it's infinite! If you have a distribution with such large outliers that you are in this case, then you'll always struggle to perform any inference about it's mean.
-* If we are in case (3) then both the mean and variance are finite. This is trivial, and it's likely that the regular t-test based on the sample mean and variance will perform fine. This corresponds to the situation where there are no significant outliers in your metric.
-* Case (2) is the interesting one. The mean is finite, so we may want to perform inference on it, however the variance is infinite, which will break the t statisitc which uses the sample variance. **This will be the focus of rest of this post - how can we perform inference on the mean in cases like this?**
+: Three important scenarios for the sample mean and variance of the GPD and Pareto distributions. {#tbl-pareto-cases}
 
-**But what does infinte variance really mean?** The sample variance is always finite, even if the population distribution from which that sample was drawn has infinite variance. However, if the population distribution has infinite variance, then the sample variance will *not* converge as the sample size approaches infinty. 
+**But what does infinte mean or infinite variance really mean?** The *sample* mean or variance is always finite, even if the population distribution from which that sample was drawn has infinite mean or variance. However, if the population distribution has infinite mean / variance, then the sample mean / variance will *not* converge as the sample size approaches infinty. 
 
-This can be seen in @fig-inf-variance below, where I simulate estimating the sample variance as a function of sample size for the Log-Normal and GPD distributions. Each grey line represents one sample, where I calculate the sample variance cumulatively, adding one point at a time. 
+This can be seen in @fig-inf-variance below, where I simulate estimating the sample variance as a function of sample size for the Log-Normal and GPD distributions, where the GPD distribution has infinite variance. Each grey line represents one sample, where I calculate the sample variance cumulatively, adding one point at a time. 
 
 ```{julia}
 #| label: fig-inf-variance
@@ -237,7 +235,30 @@ hline!([var(log_norm)], color=:red, label="Population Variance")
 plot(p1, p2, fmt = :png; dpi = 600)
 ```
 
-You can see that for the Log-Normal distribution, as the sample size gets large the variance converges towards the population variance, while for the GPD distribution it does not converge, and instead just keeps increasing. This is a problem, because we rely on the law of large numbers so that when we reach very large sample sizes, the sample statistics are a good approximation of the population statistics.
+You can see that for the log-normal distribution, as the sample size gets large the variance converges towards the population variance, while for the GPD distribution it does not converge, and instead just keeps increasing. 
+
+This is a problem, because when performing inference about the mean via the t-test, we construct the t-statistic from the sample mean and sample variance. If, for example, we are performing a one-sample t-test to test the null hypothesis that the mean of the population distribution is equal to a specific value $\mu_0$, we would calculate the t-statistic as:
+
+$$
+t = \frac{\hat{\mu} - \mu_0}{\hat{\sigma} / \sqrt{n}}
+$$
+
+Where $\hat{\mu}$ is the sample mean, $\hat{\sigma}^2$ is the sample variance and $n$ is the sample size. Therefore, refering back to the three cases from @tbl-pareto-cases:
+
+* If we are in case (1) where both the mean and variance are infinite, then there is basically no hope for any inference about the mean, since it's infinite! If you have a distribution with such large outliers that you are in this case, then you'll always struggle to perform any inference about it's mean. I'm not even sure what the interpretation of such an analysis would be...
+* If we are in case (3) then both the mean and variance are finite. This is trivial, and it's likely that the regular t-test based on the sample mean and variance will perform fine. Probably you're data wouldn't even look like it has significant outliers.
+* Case (2) is the interesting one. The mean is finite, so we may want to perform inference on it, however the variance is infinite, which will break the t statisitc which uses the sample variance. 
+
+So to summarise:
+
+1. It's common for the tails of a wide variety of distributions to be well described by the GPD distribution.
+1. Under certain conditions, the GPD distribution can have infinite variance but a finite mean. 
+1. This would make any sample drawn from that distribution have a sample variance that does not converge as the sample size increases, and instead the variance will just increase as the sample size increases.
+1. This will break out t-statistic, which requires the sample variance.
+
+This sounds a lot like the situation we have with outliers in our revenue per visitor metric! Perhaps the tail of that distribution follows a power law, where we have infinite variance. This would explain why our variance is so large, and therefore why our experimental power is so poor! 
+
+## Inference about the mean of a power law distribution
 
 So if we cannot use the sample variance, what can we do? Well really we only use the sample variance so that we can estimated the standard error of the mean, $\hat{\sigma}_\mu$, as:
 
@@ -245,19 +266,11 @@ $$
 \hat{\sigma}_\mu = \frac{\hat{\sigma}}{\sqrt{n}}
 $$
 
-Is there a way we can do this without the sample variance? Yes, with Maximum Likelihood Estimation and the delta method!
-
-## Inference about the mean of a power law distribution
-
-To estimate the mean and the standard error on the mean via maximum likelihood estimation, we can follow these steps:
+Is there a way we can do this without the sample variance? Yes, with maximum likelihood estimation and the delta method! This approach takes three steps:
 
 1. Assume a parametric distribution for your population
 1. Fit your distribution to your data using maximum likelihood estimation
-1. Calculate the mean and the standard error of the mean from your maximum likelihood fit. This requires calculating the hessian, and using the delta method.
-
-This method is nice because it doesn't require us to estimate the sample variance at any point, so we are able to estimate the mean and standard error on the mean, even when the population variance is infinite!
-
-If you want to see the more detailed method, including all the nitty gritty maths, it's here:
+1. Calculate the mean and the standard error of the mean from your maximum likelihood fit. This requires calculating the hessian of the log-likelihood of your data, and using the delta method.
 
 ::: {.callout-tip collapse="true"}
 ## Detailed method with maths
@@ -285,13 +298,17 @@ $$ {#eq-delta-indep}
 Where $\sigma_i^2$ are the diagonal elements of $\hat{\Sigma}$.
 :::
 
-This method does have some drawbacks - you need to make an assumption about the parameteric form of the population distribution, and if that is incorrect it's very likely the estimator will be biased. Also, even if the parametric form is correctly specified, it's usually the case that the maximum likelihood estimator is not unbiased by default, it usually requires some bias correction to achieve that. I'm not going to do any bias correction in this post, but it would be interesting to explore!
+This method is nice because it doesn't require us to estimate the sample variance at any point, so we are able to estimate the mean and standard error on the mean, even when the population variance is infinite!
 
-Now let's test this method using the GPD and Pareto distributions.
+This method does, however, have some drawbacks - you need to make an assumption about the parameteric form of the population distribution, and if that is incorrect it's very likely the estimator will be biased. Also, even if the parametric form is correctly specified, it's usually the case that the maximum likelihood estimator is not unbiased by default, it usually requires some bias correction to achieve that. This goes beyond the scope of this blog post, but would certainly be possible to explore.
+
+Now let's see how this will work with the GPD and Pareto distributions.
 
 ### The Pareto (Hill) estimator
 
-This method is simple for the Pareto distribution, as the maximum likelihood estimate can be calculated analytically, as is shown in [@paretoest]. This estimator is often known as the Hill estimator, and the parameters are calculated as:
+While the more basic Pareto distribution might not have as much flexibility as the GPD, and therefore might not fit the tail of your distribution as well, the maximum likelihood estimate can be calculated analytically, making it much simpler and faster to implement. 
+
+The maximum likelihood estimator of the Pareto distribution is often known as the Hill estimator, and the parameters are calculated as follows (see @paretoest for the derivation):
 
 $$
 \hat{\theta} = \min{(X_j)}
@@ -305,19 +322,19 @@ The maximum likelihood estimator for the mean and standard error are then calcul
 ::: {.callout-tip collapse="true"}
 ## Derivation of the mean and standard error
 
-The mean of the pareto distribution is given by:
+The mean of the Pareto distribution is given by:
 $$
 \mu(\theta, \alpha) = \frac{\theta \alpha}{\alpha - 1}
 $$
 
-The parameters are independent, so there is no covariance. Their standard errors are given by REFERENCE WIKIPEDIA:
+The parameters are independent, so there is no covariance. Their standard errors are given by @malik1970estimation (via [wikipedia](https://en.wikipedia.org/wiki/Pareto_distribution#Estimation_of_parameters)) as:
 
 $$
 \hat{\sigma}_\alpha = \frac{\hat{\alpha}}{\sqrt{n}}
 $$
 
 $$
-\hat{\sigma}_\theta = ...
+\hat{\sigma}_\theta = \frac{\theta \sqrt{\alpha n}}{(\alpha n - 1) \sqrt{\alpha n - 2}} \underset{n \rightarrow \infty}{\approx} \frac{\theta}{\alpha n}
 $$
 
 We can calculate the standard error on the mean using @eq-delta-indep:
@@ -326,10 +343,20 @@ $$
 \hat{\sigma}_\mu^2 = \left| \frac{\partial \mu}{\partial \alpha} \right|^2 \hat{\sigma}_\alpha^2 + \left| \frac{\partial \mu}{\partial \theta} \right|^2 \hat{\sigma}_\theta^2
 $$
 
-Calculating the derivatives and substituting them in, we get the following equation for the standard error on the mean:
+The two derivatives are:
 
 $$
-\hat{\sigma}_\mu = \frac{\theta}{\sqrt{n}} \frac{\alpha^2 - \alpha + 1}{(\alpha - 1)^2}
+\frac{\partial \mu}{\partial \alpha} = \frac{-\theta}{(\alpha - 1)^2}
+$$
+
+$$
+\frac{\partial \mu}{\partial \theta} = \frac{\alpha}{(\alpha - 1)}
+$$
+
+So finally substituting it all in we can derive the following equation for the standard error on the mean:
+
+$$
+\hat{\sigma}_\mu = | \hat{\mu} | \sqrt{ \frac{1}{n(\alpha - 1)^2} +  \frac{1}{\alpha^2 n^2} }
 $$
 :::
 
@@ -337,7 +364,7 @@ $$
 \hat{\mu}_\text{pareto} = \frac{\hat{\theta} \hat{\alpha}}{\hat{\alpha} - 1}
 $$
 $$
-\hat{\sigma}_{\mu, \text{ pareto}} = \frac{\hat{\theta}}{\sqrt{n}} \frac{\hat{\alpha}^2 - \hat{\alpha} + 1}{(\hat{\alpha} - 1)^2}
+\hat{\sigma}_{\mu, \text{pareto}} = | \hat{\mu} | \sqrt{ \frac{1}{n(\alpha - 1)^2} +  \frac{1}{\alpha^2 n^2} }
 $$
 
 This is implemented in Julia below:
@@ -376,8 +403,7 @@ function hill_estimator(x::Vector{Float64})
 
 	# Estimate the mean and standard error from the MLE parameters
 	μ = α * θ / (α - 1)
-	σ = abs(μ) * sqrt(1.0 / ((α - 1)^2 * n) + (α - 1)^2 / (α^2 * n))  
-	# CHECK THIS DERIVATION PROPERLY
+	σ = abs(μ) * sqrt( 1 / (n * (α - 1)^2) +  1 / (α * n)^2 )
 
 	# Return a struct holding the estimated mean and standard error
 	return EstimatorResult(μ, σ) 
@@ -385,9 +411,9 @@ end
 ```
 ### The GPD estimator
 
-For the GPD estimator it's more complicated, because there is no closed form solution to the maximum likelihood estimation. This is a well known challenge in EVT and many methods have been proposed to fit the GPD to a sample. 
+For the GPD estimator it's more complicated, because there is no closed form analytical solution to the maximum likelihood estimation. This is a well known challenge in extreme value theory and many methods have been proposed to fit the GPD to a sample. 
 
-Here I will be using the method proposed by @zhang_gpdfit, which was already implemented in the `ParetoSmooth.jl` package. I will then use the great automatic differentiation built into Julia in `ForwardDiff.jl` to estimate the gradient and hessian, which I use to estimate the standard error on the mean via @eq-delta-multivariate. 
+Here I will be using the method proposed by @zhang2009new, which was already implemented in the `ParetoSmooth.jl` package. I will then use the great automatic differentiation built into Julia in `ForwardDiff.jl` to estimate the gradient and hessian, which I use to estimate the standard error on the mean via @eq-delta-multivariate. 
 
 The full implementation in Julia is here:
 
@@ -436,7 +462,17 @@ function gpd_estimator(x::Vector{Float64})
 end
 ```
 
+As an aside, this really shows off some of the strengths of Julia - I was able to implement this quite complex method in such a short and easy to read piece of code. However, as it's a numerical solution it will run slower and be less stable than the analytical Hill estimator for the Pareto distribution.
+
 ### How do these estimators perform?
+
+To evaluate these estimators, I ran some simulations. First I simulated data coming from the Pareto and GPD distributions, with finite mean but infinite variance. Since I simulate this data I know the true population mean, so I can compare the estimators and see how well they do at estimating the population mean. I then repeat this process many times, each time collecting the estimated population mean and standard error. 
+
+I compare three estimators:
+
+1. **The sample mean / variance estimator.** This is the standard method of estimating the population mean used in the t-test. 
+1. **The Hill estimator.** This is the maximum likelihood estimator based on the assumption that the data comes from a Pareto distribution.
+1. **The GPD estimator.** This is the maximum likelihood estimator based on the assumption that the data comes from a GPD distribution. 
 
 ```{julia}
 const EstimatorResults = Vector{EstimatorResult}
@@ -477,16 +513,16 @@ function standardized_error(sim::Simulation)
 	(μ(sim.ests) .- sim.μ_true) ./ σ(sim.ests)
 end
 
-function rmse(sim::Simulation)
-	sqrt(mean((μ(sim.ests) .- sim.μ_true).^2))
+function mse(sim::Simulation)
+	mean((μ(sim.ests) .- sim.μ_true).^2)
 end
 
-function stddev(sim::Simulation)
-	std(μ(sim.ests))
+function variance(sim::Simulation)
+	std(μ(sim.ests))^2
 end
 
 function bias(sim::Simulation)
-	mean(μ(sim.ests) .- sim.μ_true)
+	mean(μ(sim.ests) .- sim.μ_true)^2
 end
 
 function coverage(sim::Simulation, α::Float64)
@@ -536,6 +572,11 @@ for i in 1:length(n_samples)
 	end
 end
 ```
+
+#### Testing on Pareto data
+
+First let's look at how the estimators perform on data that came from a Pareto distribution. As expected, @fig-evt-estimator-comparison-pareto shows that the baseline method of using the sample mean doesn't work well. It has skewed estimates, with high variance. However, both the hill estimator and the GPD estimator perform much better, with the estimates centered on the true population mean and with much lower variance.
+
 ```{julia}
 #| label: fig-evt-estimator-comparison-pareto
 #| fig-cap: "Distribution of estimates for a Pareto population distribution, with alpha=1.5 and theta=20."
@@ -565,31 +606,35 @@ end
 plot(p..., layout=(length(estimators), length(n_samples)))
 ```
 
-```{julia}
-#| label: fig-evt-estimator-comparison-gpd
-#| fig-cap: "Distribution of estimates for a GPD population distribution, with mu=100, theta=20.0, xi=2/3."
+Now we can quantify the total error that the estimator makes as the mean squared error:
 
-p = Array{Plots.Plot{Plots.GRBackend}}(undef, size(gpd_sims))
-for i in 1:length(n_samples)
-	for j in 1:length(estimators)
-		p[i,j] = plot_means(gpd_sims[i, j])
-		plot!(
-			legend=(i==1) & (j==1), 
-			title="$(estimator_names[j]) Estimator\n(X~GPD, n=$(n_samples[i]))"
-		)
-	end
-end
+$$
+\text{MSE} = E[(\hat{\mu} - \mu)^2]
+$$
 
-plot(p..., layout=(length(estimators), length(n_samples)))
-```
+This is a convenient metric to use because we can break it down in terms of bias and variance:
+
+$$
+\text{bias} = (E[\hat{\mu}] - E[\mu])^2
+$$
+
+$$
+\text{variance} = E[(\hat{\mu} - E[\hat{\mu}])^2]
+$$
+
+$$
+\text{MSE} = \text{bias} + \text{variance}
+$$
+
+Below you can see how the bias, variance and MSE compare. In this case the bias is low for all methods, while the Hill estimator has the lowest variance and MSE, closely followed by the GPD estimator. 
 
 ```{julia}
 #| label: fig-evt-estimator-stats-comparison-pareto
-#| fig-cap: "Average performance of estimators for a Pareto population distribution, with alpha=1.5 and theta=20. RMSE is the Root Mean Squared Error of the estimates vs the true population mean, the Standard Deviation is the standard deviation of the estimates, and the |Bias| is the absolute value of the difference between the average of the estimates and the true population mean. Ideally we want |Bias|=0 and then RMSE and Standard Deviaton as small as possible."
+#| fig-cap: "Average performance of estimators for a Pareto population distribution, with alpha=1.5 and theta=20. MSE is the Mean Squared Error of the estimates vs the true population mean, the variance is the variance of the estimates, and the bias is the squared difference between the average of the estimates and the true population mean. Ideally we want bias=0 and then MSE and variance as small as possible."
 
 function plot_stats!(sim::Simulation, label::Base.String)
-	y = [abs(bias(sim)), stddev(sim), rmse(sim)]
-	x = ["|Bias|", "Standard Deviation", "RMSE"]
+	y = [bias(sim), variance(sim), mse(sim)]
+	x = ["Bias", "Variance", "MSE"]
 	p = plot!(
 		x, 
 		y,
@@ -615,29 +660,21 @@ end
 plot(p..., layout=grid(2,1))
 ```
 
-```{julia}
-#| label: fig-evt-estimator-stats-comparison-gpd
-#| fig-cap: "Average performance of estimators for a GPD population distribution, with mu=100, theta=20.0, xi=2/3. RMSE is the Root Mean Squared Error of the estimates vs the true population mean, the Standard Deviation is the standard deviation of the estimates, and the |Bias| is the absolute value of the difference between the average of the estimates and the true population mean. Ideally we want |Bias|=0 and then RMSE and Standard Deviaton as small as possible."
+Finally, just having a good estimate of the mean is not enough - we need to be able to estimate the standard error on the mean reliably for the estimator to be useful for A/B testing.
 
-p = Array{Plots.Plot{Plots.GRBackend}}(undef, length(n_samples))
-for i in 1:length(n_samples)
-	p[i] = plot(
-		legend = (i==1),
-		titlefontsize=10, 
-		title="X~GPD, n=$(n_samples[i])"
-	)
-	for j in 1:length(estimators)
-		plot_stats!(gpd_sims[i, j], estimator_names[j])
-	end
-	hline!([0.0], color=:black, label="")
-end
+To validate whether the estimate of the standard error is good, I look at the distribution of standardised residuals, which is the difference between the estimated mean and the true population mean, divided by the standard error:
 
-plot(p..., layout=grid(2,1))
-```
+$$
+\text{standardised residual} = \frac{\hat{\mu} - \mu}{\hat{\sigma}_\mu}
+$$
+
+If the standard errors are good, the standardised residuals should roughly follow a t-distribution with mean = 0, standard deviation = 1 and degrees of freedom = n - 1. 
+
+We see below that the Hill estimator is good for both sample sizes, while the GPD works well for the larger sample size, but is not as good for the small sample size. The sample mean and variance is poor, again showing the skewed shape. 
 
 ```{julia}
 #| label: fig-evt-estimator-normed-comparison-pareto
-#| fig-cap: "A comparison of the standardised errors of the different estimators for a Pareto population distribution, where the standardised error is the difference between the estimated mean and the population mean, divided by the estimated standard deviation. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
+#| fig-cap: "A comparison of the standardised errors of the different estimators for a Pareto population distribution. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
 
 function plot_standardized_errors(sim::Simulation)
 	err = standardized_error(sim)
@@ -664,6 +701,58 @@ end
 plot(p..., layout=(length(estimators), length(n_samples)))
 ```
 
+So overall the Hill and GPD estimators work well for Pareto distributed data, with the Hill estimator performing slightly better. But this is expected, because the data was drawn from the Pareto distribution, which is exactly what the Hill estimator expects. So what happens if the data comes from a GPD distribution?
+
+#### Testing on GPD data
+
+Here I do the same analysis again, but this time using data coming from a GPD distribution for my testing. This distribution is more complex, so will be a harder test for the Hill estimator, as it breaks the parametric assumption we made. 
+
+First looking at the distributions of the mean estimates, we see again that the mean / variance estimator is very skewed, and the GPD estimator looks good. However, this time the Hill estimator is **very** bad. It's not skewed - the estimates have a nice, normally distributed shape, but they are not even nearly centered on the true population mean. 
+
+```{julia}
+#| label: fig-evt-estimator-comparison-gpd
+#| fig-cap: "Distribution of estimates for a GPD population distribution, with mu=100, theta=20.0, xi=2/3."
+
+p = Array{Plots.Plot{Plots.GRBackend}}(undef, size(gpd_sims))
+for i in 1:length(n_samples)
+	for j in 1:length(estimators)
+		p[i,j] = plot_means(gpd_sims[i, j])
+		plot!(
+			legend=(i==1) & (j==1), 
+			title="$(estimator_names[j]) Estimator\n(X~GPD, n=$(n_samples[i]))"
+		)
+	end
+end
+
+plot(p..., layout=(length(estimators), length(n_samples)))
+```
+
+This is an example of the bias that can easily be introduced with this method. Becuase we made an assumption about the parametric form of the population distribution, and got that assumption wrong, the mean estimate is highly biased. 
+
+You can see it clearly in the MSE and bias results in figure @fig-evt-estimator-stats-comparison-gpd. The hill estimator has low variance, but high bias, meaning that overall the MSE is much worse than the GPD estimator. Interestingly, even with this high bias it still has a lower MSE than the baseline sample mean / variance estimator, because the variance of the baseline mean/variance estimator is so high! This wouldn't hold in general though, probably with a higher sample size or slightly different parameters the hill estimator would perform the worst of all.
+
+```{julia}
+#| label: fig-evt-estimator-stats-comparison-gpd
+#| fig-cap: "Average performance of estimators for a GPD population distribution, with mu=100, theta=20.0, xi=2/3. MSE is the Mean Squared Error of the estimates vs the true population mean, the variance is the variance of the estimates, and the bias is the squared difference between the average of the estimates and the true population mean. Ideally we want bias=0 and then MSE and variance as small as possible."
+
+p = Array{Plots.Plot{Plots.GRBackend}}(undef, length(n_samples))
+for i in 1:length(n_samples)
+	p[i] = plot(
+		legend = (i==1),
+		titlefontsize=10, 
+		title="X~GPD, n=$(n_samples[i])"
+	)
+	for j in 1:length(estimators)
+		plot_stats!(gpd_sims[i, j], estimator_names[j])
+	end
+	hline!([0.0], color=:black, label="")
+end
+
+plot(p..., layout=grid(2,1))
+```
+
+Finally we can check the standardised residuals again, and as expected the hill estimator is far away from the expected t-distribution. THe GPD estimator again works best, closely matching the t-distribution for the larger sample size. 
+
 ```{julia}
 #| label: fig-evt-estimator-normed-comparison-gpd
 #| fig-cap: "A comparison of the standardised errors of the different estimators for a GPD population distribution, where the standardised error is the difference between the estimated mean and the population mean, divided by the estimated standard deviation. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
@@ -681,63 +770,48 @@ end
 plot(p..., layout=(length(estimators), length(n_samples)))
 ```
 
-## Appling EVT to the trimmed mean
+So it seems that the GPD distribution works better in general, but if the assumptions of the hill estimator are met (i.e. the samples come from a Pareto distribution), then the hill estimator is better. Of course, the GPD estimator will fail in the same way that the hill estimator did if we were to test it on a dataset that breaks it's assumptions, it's just a more flexible distribution so its assumptions are less likely to break. 
 
-In the previous section I was only really looking at how we can 
+## Appling extreme value theory to the trimmed mean
 
-* We can formalise this by assuming that the majority of our sample comes from some well behaved population distribution, but a small number of samples are drawn from a population distribution with infinite variance. For example, the Pareto distribution [@powerlaws].
-* This contribution from the infinite variance distribution is a problem, because it causes the mixture distribution to also have infinite variance, and therefore the central limit theorem breaks down. 
+Now as both the Hill estimator and GDP estimator outperform the simple mean/variance estimator for power-law type data, we can try to apply them to our revenue A/B testing problem. However, we want to use the new estimators **only in the tail**. The rest of the distribution is unlikely to be power-law distributed, so the new estimators would fail there.
 
-## Summary
+This is where the comparison with the trimmed and windsorised means comes in. In both of those methods, an arbitrary threshold is chosen, and all values that are above that threshold are designated as outliers and either ignored or capped. But what if we were to keep the outliers as they are, and use our new estimators on those, while the non-outliers are estimated by the regular mean-variance estimator. We can then combine the two estimates to get the overall estimate of the mean and the standard error for the whole sample.
 
-TODO:
-* Compare trimming, winzoring and pareto smoothing with different cutoffs
-* Use KDE + Pareto mixture. Then take the mean of the MLE pareto + mean of other data for estimator. Use laplace approx for variance.
-* Basic check: is Hill better at estimating mean than sample mean?
+::: {.callout-tip collapse="true"}
+## Detailed method with maths
 
-SECTIONS:
-1. Introduction on A/B testing, revenue as a metric, and outliers. Talk about outliers as coming from a distribution with infinite population variance.
-2. Infinite population variance: the Pareto distribution. What does infinite variance mean? Why is it a problem for A/B testing? Do a simulation with a simple welches t-test.
-3. What can we not do? Log transform, median test, non-parametric test. We care about the mean. 
-4. Simple solutions: trimming vs windsorizing. These are a bias variance tradeoff. How do they perform? Do the same simulations.
-5. What if we model the tail as a pareto distribution directly? Try PSIS and a KDE + Pareto Mixture for MLE. 
-6. Choosing the best cutoff? KS test, AIC, BIC, Mixture? Mixture doesn't need a cutoff - that's nice. 
-7. Final comparison and results. My recommendation. Key points - choose the cutoff without looking at the results to avoid peaking.  
+1. Set the trimming quartile to split the data into "outliers" and "inliers". This is an arbitrary percentile of the distribution, and typically only a small percentage of the data should be classified as outliers. 
+2. Estimate the mean and standard error for the inliers and outliers separately. Now you should have the following stats:
 
-Method:
+$$
+\hat{\mu}_\text{out}, \hat{\sigma}_{\mu, \text{out}} = \text{Estimated mean and standard error for outliers.}
+$$
 
-The following is inspired by the Pareto Smoothed Importance Sampling paper [@psis]:
+$$
+\hat{\mu}_\text{in}, \hat{\sigma}_{\mu, \text{in}} = \text{Estimated mean and standard error for inliers.}
+$$
 
-1. Set $M = min(0.2 S, 3 \sqrt{S})$ OR find best M using KS-test [@powerlawsempirical];
-2. Set $\hat{u} = x_{S-M}$
-3. Estimate $\alpha$ of the tail, using the standard Hill estimator
-4. Set $x'_{S-M+z} = \min{ \left( F^{-1} \left( \frac{z - 1/2}{M} \right), \max_s{(x_s)} \right)}$
+$$
+w_\text{in}, w_\text{out} = \text{The fraction of datapoints assigned to inliers / outliers.}
+$$
 
-Now perform a t-test on $x'$ instead of $x$. 
+$$
+n = \text{Total number of datapoints in the sample.}
+$$
 
-Throughout this article we will use two types of distributions to represent distributions with infinite variance, the Pareto distribution and the Generalised Pareto Distribution (GPD). 
+3. Now we can combine the estimates to get the estimated mean and standard error for the whole sample. This method of combining the results together is built on top of the fact that the overall distribution can be thought of as a mixture of two distributions - the outliers and inliers. So we can combine the moments of the distribution as if they are a mixture (see [wikipedia](https://en.wikipedia.org/wiki/Mixture_distribution#Moments)).
 
+$$
+\hat{\mu} = w_\text{in} \hat{\mu}_\text{in} + w_\text{out} \hat{\mu}_\text{out}
+$$
 
+$$
+\hat{\sigma}_\mu = \sqrt{w_\text{in}^2 \hat{\sigma}_{\mu, \text{in}}^2 + w_\text{out}^2 \hat{\sigma}_{\mu, \text{out}}^2 + \frac{w_\text{in} \hat{\mu}_\text{in}^2 + w_\text{in} \hat{\mu}_\text{in}^2 - \hat{\mu}}{n}}
+$$
 
-Both of these distributions have a power law tail, and therefore can have infinite variance. This is noticable when plotted on a log-log scale (as is shown in @fig-pareto), where the tail will be linear. This is shown in contrast to a Log-Normal distribution, where the tail is not Linear, and eventually at very high $X$ the PDF drops below the power law tails. 
-
-While the two types of pareto distribution have the same tail behavior, they differ in how they behave at small values of $X$. The Pareto distribution is a pure power law until some value, below which the probability mass is 0, while the Generalised Pareto Distribution smoothly transitions away from being power law at low X. The GPD is a more general distribution - with the correct parameters in the GPD you can get back to the Pareto distribution - however it can be harder to fit to data because it has more parameters. 
-
-The challenge for A/B testing can be demonstrated by comparing these distributions with the log-normal distribution. While you are always able to calculate the sample variance of any sample of data, whether it is from a population with finite or infinite variance, if the sample is drawn from a population with infinite variance then the sample variance will not converge as the sample size increases. You can see this in the example below, where I sample from a GPD and a LogNormal Distribution and then calculate the sample variance vs sample size. 
-
-
-
-This causes problems for the t-test, since it uses the sample variance to estimate the standard error on the mean. So if your data has a power law tail, it's unlikely that this will give a good estimate. 
-
-Power law tails are usualy quantified using the Hill Estimator. We can get the standard error on that estimate too. Let's compare the Hill estimator + Delta method with the mean and variance estimator for the regular Pareto distribution.
-
-
-
-You can see that the hill estimator performs much better than using the same mean and variance. 
-
-So we want to use the Hill estimator instead of the sample mean and variance, but **only in the tail**. The rest of the distribution is unlikely to be pareto distributed, so the Hill estimator would fail there. This brings us to the next challenge: how do we decide when we are "in the tail"?
-
-To do this, we will use a semi-parametric mixture of the Pareto distribution in the tail and a Kernel Density Approximation (KDE) elsewhere. The KDE bandwidth and cutoff threshold for the tail will be chosen by maximizing the Leave-One-Out (LOO) likelihood.
+Note - the above equation for $\hat{\sigma}_\mu$ is slightly different to what you'll see in wikipedia. This is because we are combining the standard error on the mean, not the standard deviations.
+:::
 
 To test this out, I'll create a synthetic dataset which is a mixture of a GPD and two lognormal distributions. This will make the main distribution bimodal (and so not too easy for our method) but with a power law tail that gives it infinite variance. This distribution is shown in @fig-samples. 
 
@@ -776,8 +850,20 @@ plot!(x, y_comp, lw=1, label=["Log-Norm 1" "Log-Norm 2" "GPD"])
 plot!(yscale=:log10, xscale=:log10, yrange=[1e-6, 1.0])
 xlabel!("X")
 
-plot(p1,p2)
+plot(p1,p2, size=(600,400))
 ```
+
+Again I perform very similar simulations to the previous section - estimating the MSE, variance, bias and the MSE of the standardised residuals. In an ideal world, the MSE and variance will be as low as possible, the bias will be 0, and the MSE of the standardised residuals will be as close to 1 as possible. I also calculate the coverage of 95% confidence intervals of the estimates, which is the percentage of times that the true population mean is within the 95% confdience intervals of the estimate. If the estimator is working well it should cover the true value 95% of the time. I calculate all these metrics as a function of the trimming quantile.
+
+Here I will compare the following estimators:
+
+1. **The simple mean / variance estimator.** This is the standard method of estimating the population mean used in the t-test. It is independent of the trimming quintile.
+1. **The trimmed mean / variance estimator.** The data is trimmed at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are excluded.
+1. **The winsorized mean / variance estimator.** The data is winsorized at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are capped at the trimming quintile.
+1. **The hill tail estimator.** This estimator uses the hill estimator for the samples above the trimming quntile, and the sample mean / variance estimator for the samples below, and then merges the results together.
+1. **The GPD tail estimator.** This estimator uses the GPD estimator for the samples above the trimming quntile, and the sample mean / variance estimator for the samples below, and then merges the results together.
+
+The simulation results are shown below in @fig-trimming-sim-by-metric.
 
 ```{julia}
 #| output: false
@@ -792,8 +878,10 @@ function merge_estimates(est1::EstimatorResult, est2::EstimatorResult, n1::Int64
 	w2 = n2 / n
 	μ = est1.μ * w1 + est2.μ * w2
 
-	σ = sqrt(est1.σ^2 * w1^2 + est2.σ^2 * w2^2 + (est1.μ + est2.μ)^2 * w1 * w2 / n)
-
+	σ = sqrt(
+		w1^2*est1.σ^2 + w2*est2.σ^2 
+		+ (w1 * est1.μ^2 + w2 * est2.μ^2 - μ^2) / n
+	)
 	return EstimatorResult(μ, σ)
 end
 
@@ -841,7 +929,7 @@ function gpd_tail_estimator(x_in::Vector{Float64}, tail_index::Int64)
 	)
 end
 
-function windzorised_estimator(x_in::Vector{Float64}, tail_index::Int64)
+function winsorized_estimator(x_in::Vector{Float64}, tail_index::Int64)
 	if tail_index <= 1
 		return sample_mean_variance_estimator(x_in)
 	end
@@ -864,11 +952,11 @@ end
 
 struct TrimmingSimulation
 	tail_quantiles::Vector{Float64}
-	rmse::Vector{Float64}
-	stddev::Vector{Float64}
+	mse::Vector{Float64}
+	variance::Vector{Float64}
 	bias::Vector{Float64}
-	rmse_normed::Vector{Float64}
-	stddev_normed::Vector{Float64}
+	mse_normed::Vector{Float64}
+	variance_normed::Vector{Float64}
 	coverage_95::Vector{Float64}
 	function TrimmingSimulation(
 		pop_dist::UnivariateDistribution,
@@ -877,11 +965,11 @@ struct TrimmingSimulation
 		estimator,
 		tail_quantiles::Vector{Float64}
 	)
-		rmse_result = Vector{Float64}(undef, length(tail_quantiles))
-		stddev_result = Vector{Float64}(undef, length(tail_quantiles))
+		mse_result = Vector{Float64}(undef, length(tail_quantiles))
+		variance_result = Vector{Float64}(undef, length(tail_quantiles))
 		bias_result = Vector{Float64}(undef, length(tail_quantiles))
-		rmse_normed_result = Vector{Float64}(undef, length(tail_quantiles))
-		stddev_normed_result = Vector{Float64}(undef, length(tail_quantiles))
+		mse_normed_result = Vector{Float64}(undef, length(tail_quantiles))
+		variance_normed_result = Vector{Float64}(undef, length(tail_quantiles))
 		coverage_95_result = Vector{Float64}(undef, length(tail_quantiles))
 		for (i, q) in enumerate(tail_quantiles)
 			tail_index = tail_quantile_to_index(
@@ -894,20 +982,20 @@ struct TrimmingSimulation
 				estimator, 
 				(tail_index,)
 			)
-			rmse_result[i] = rmse(sim)
-			stddev_result[i] = stddev(sim)
+			mse_result[i] = mse(sim)
+			variance_result[i] = variance(sim)
 			bias_result[i] = bias(sim)
-			rmse_normed_result[i] = sqrt(mean(standardized_error(sim).^2))
-			stddev_normed_result[i] = std(standardized_error(sim).^2)
+			mse_normed_result[i] = mean(standardized_error(sim).^2)
+			variance_normed_result[i] = std(standardized_error(sim))^2
 			coverage_95_result[i] = coverage(sim, 0.05)
 		end
 		new(
 			tail_quantiles,
-			rmse_result,
-			stddev_result,
+			mse_result,
+			variance_result,
 			bias_result,
-			rmse_normed_result,
-			stddev_normed_result,
+			mse_normed_result,
+			variance_normed_result,
 			coverage_95_result,
 		)
 	end
@@ -918,14 +1006,14 @@ baseline_trimming_sim = TrimmingSimulation(
 	data_dist,
 	50000,
 	500,
-	windzorised_estimator, # With trimming = 0 this is the same as untrimmed sample mean and variance 
+	winsorized_estimator, # With trimming = 0 this is the same as untrimmed sample mean and variance 
 	[0.0]
 )
 
-estimators = [trimmed_estimator, windzorised_estimator, hill_tail_estimator, gpd_tail_estimator]
+estimators = [trimmed_estimator, winsorized_estimator, hill_tail_estimator, gpd_tail_estimator]
 estimator_names = [
 	"Trimmed Mean"
-	"Windzorised Mean"
+	"Winsorized Mean"
 	"Hill Tail Mean"
 	"GPD Tail Mean"
 ]
@@ -946,7 +1034,7 @@ end
 
 ```{julia}
 #| label: fig-trimming-sim-by-metric
-#| fig-cap: "Performance of the different trimming methods based on various metrics. The RMSE and Standard Deviation should be as small as possible. The Bias should be as close to 0.0 as possible, the Standardised RMSE should be 1.0 and the 95% coverage should be 0.95. The last 3 target values are marked by black horizontal lines."
+#| fig-cap: "Performance of the different trimming methods based on various metrics. The MSE and variance should be as small as possible. The Bias should be as close to 0.0 as possible, the Standardised MSE should be 1.0 and the 95% coverage should be 0.95."
 
 function plot_sim_metrics!(sims::Vector{TrimmingSimulation}, sim_bl::TrimmingSimulation, metric::Symbol)
 	hline!(getfield(sim_bl, metric))
@@ -959,7 +1047,7 @@ function plot_sim_metrics!(sims::Vector{TrimmingSimulation}, sim_bl::TrimmingSim
 		)
 	end
 end
-estimator_names = ["Trimmed Mean" "Windzorised Mean" "Hill Tail Mean" "GPD Tail Mean"]
+estimator_names = ["Trimmed Mean" "Winsorized Mean" "Hill Tail Mean" "GPD Tail Mean"]
 
 function percent_fmt(x)
 	if x < 0.01
@@ -972,7 +1060,7 @@ end
 xticklocations = [0.001, 0.01, 0.1, 0.5]
 
 p1 = plot(
-	title="RMSE",
+	title="MSE",
 	legend=false,
 	xlabel="Trimming Quantile",
 	yscale=:log10,
@@ -983,10 +1071,10 @@ p1 = plot(
 	xticks=xticklocations,
 	xrange = (0.001, 0.5)
 )
-plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :rmse)
+plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :mse)
 
 p2 = plot(
-	title="Standard Deviation",
+	title="Variance",
 	legend=false,
 	xlabel="Trimming Quantile",
 	yscale=:log10,
@@ -997,7 +1085,7 @@ p2 = plot(
 	xticks=xticklocations,
 	xrange = (0.001, 0.5)
 )
-plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :stddev)
+plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :variance)
 
 p3 = plot(
 	title="Bias",
@@ -1005,16 +1093,16 @@ p3 = plot(
 	xlabel="Trimming Quantile",
 	titlefontsize=10, 
 	xlabelfontsize=8,
+	yscale=:log10,
 	xscale=:log10,
 	xformatter = percent_fmt, 
 	xticks=xticklocations,
 	xrange = (0.001, 0.5)
 )
 plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :bias)
-hline!([0.0], color=:black, label="Ideal")
 
 p4 = plot(
-	title="Standardised RMSE",
+	title="Standardised MSE",
 	legend=false,
 	xlabel="Trimming Quantile",
 	yscale=:log10,
@@ -1025,7 +1113,7 @@ p4 = plot(
 	xticks=xticklocations,
 	xrange = (0.001, 0.5)
 )
-plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :rmse_normed)
+plot_sim_metrics!(trimming_sims, baseline_trimming_sim, :mse_normed)
 hline!([1.0], color=:black, label="Ideal")
 
 p5 = plot(
@@ -1066,32 +1154,34 @@ ylims!(-0.5, 0.5)
 plot(p1,p2,p3,p4,p5,p6)
 ```
 
+These results are interesting and in my opinion very promising for this approach!
+
+* The simple mean is the least biased of all the methods, but does not have good coverage of standardised MSE, indicating that the confidence intervals would not work well for this estimator, breaking our A/B tests.
+* The trimmed and winsorized means both behave as expected. The more we trim, the bias increases, and the variance decreases. Overall, the increase in bias is larger than the decrease in variance, meaning that the MSE gets worse. And the bias is so large that the coverage is terrible - the confidence intervals never contain the true population mean. This demonstrates why the trimmed and winsorized means are so difficult to use, because while the variance decreases, you introduce significant bias.
+* Our new estimators seem to work well, as long as the trimming quntile is not too large. Both have good coverage and standardised MSE, meaning that can be more reliably used as A/B testing metrics. The variance, bias and MSE are closer to the values for the simple mean. This means we get similar performance on average, but with a better behaved estimator that we can construct reliable confidence intervals for.
+* The hill tail estimator works better than the GPD tail estimator as long as the trimming quintile is kept below ~1%. Above that, the coverage of the hill estimator deteriorates, while the GPD tail estimator maintains its coverage until ~10%. This is expected because the GPD tail estimator is a more general distribution, so can describe a bigger portion of the tail which is not exactly Pareto distributed. 
+* The GPD tail estimator is less robust. This is likely because of the numerical estimation method. Between 1% and 10% the variance, bias and MSE go extremely high. 
+
+Overall, based on this, I think the hill estimator has the most promise. While it breaks down at high trimming quantiles, as long as the correct trimming quantile is chosen it works well. It is also computationally simpler than the GPD estimator, because it has an analytical soltuion.
+
+## Summary
+
+So it looks like we might be able to do better than the trimmed or winsorized means! This is still early stages, more work needs to be done to test this, but overall the hill-tail estimator has better coverage than the regular sample mean, while maintaining a good level of bias and variance.
+
+Some interesting next steps would be to select the trimming quantile automatically, for example using a similar method to @powerlawsempirical, as the hill estimator is very sensitive to this choice, or exploring bias corrections to the MLE estimates. 
+
+## Execution Details
+
 ```{julia}
-#| label: fig-trimming-sim-by-method
-#| fig-cap: "How the different components (Bias and Standard Deviation) contribute towards the overall RMSE of the estimators."
-
-function plot_rmse_components!(sim::TrimmingSimulation)
-	plot!(sim.tail_quantiles, sim.stddev, label="Stddev", marker=true, markersize=2)
-	plot!(sim.tail_quantiles, abs.(sim.bias), label="|Bias|", marker=true, markersize=2)
-	plot!(sim.tail_quantiles, sim.rmse, label="RMSE", marker=true, markersize=2)
+#| echo: false
+#| output: true
+println("Installed packages:")
+for (uuid, dep) in Pkg.dependencies()
+	dep.is_direct_dep || continue
+	dep.version === nothing && continue
+	println(dep.name," (", dep.version, ")")
 end
-
-plot([
-	begin
-		p = plot(
-			xlabel="Trimming Quantile", 
-			yscale=:log10, 
-			xscale=:log10,
-			title=estimator_names[i],
-			legend=i==4,
-			titlefontsize=10, 
-			xlabelfontsize=8,
-			xformatter = percent_fmt, 
-			xticks=[0.001, 0.00300001, 0.01, 0.0300001, 0.1, 0.300001]
-		)
-		plot_rmse_components!(sim)
-		p
-	end
-	for (i, sim) in enumerate(trimming_sims)
-]...)
+println("")
+print("Execution time: ")
+println(canonicalize(now() - START_TIME))
 ```
