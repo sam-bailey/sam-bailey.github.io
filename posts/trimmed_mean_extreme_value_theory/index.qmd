@@ -15,7 +15,6 @@ abstract: Testing out some ideas for dealing with outliers in A/B testing, compa
 
 using Pkg
 
-# Pkg.activate("./posts/trimmed_mean_extreme_value_theory")
 Pkg.activate("./")
 
 Pkg.add([
