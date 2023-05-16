@@ -5,6 +5,7 @@ project:
 website:
   title: "Sam Bailey | Data Science"
   favicon: favicon.png
+  twitter-card: true
   repo-url: https://github.com/sam-bailey/sam-bailey.github.io
   repo-branch: master
   site-url: https://sambailey.me

@@ -42,7 +42,7 @@ This post was heavily inspired by the work by @psis on Pareto Smoothed Importanc
 
 ## A day in the life of a data scientist
 
-Picture the situation: you're a data scientist / statistician / economist at an e-commerce company. You're working with a team who plan to run an A/B test to evaluate the impact of a new feature or promoption, and critically they want to evaluate the impact of the change on **revenue**. Sounds easy, so you get to work! 
+Picture the situation: you're a data scientist / statistician / economist at an e-commerce company. You're working with a team who plan to run an A/B test to evaluate the impact of a new feature or promotion, and critically they want to evaluate the impact of the change on **revenue**. Sounds easy, so you get to work! 
 
 Your randomisation and analysis units are visitors, and since the goal is to measure the impact on total revenue, your main metric is revenue per visitor. You plan to perform a t-test against the null hypothesis that the average revenue per visitor is the same in both control and treatment, and if you reject the null hypothesis you'll report the effect size, with a confidence interval, and pop the champaign!
 
@@ -73,15 +73,15 @@ xlabel!("Revenue per Visitor")
 plot(p1, size=(400,300))
 ```
 
-And here's the problem. The distribution of the metric is highly skewed, with lots of zeros, then some "normal" spenders, and then a very small number of extreme spenders - we'll call these our outliers. And it's these outliers that are disproportionatly increasing the variance of your average revenue per visitor estimate, hurting your power, and eventually making you wait months to estimate the impact of your experiment. 
+And here's the problem. The distribution of the metric is highly skewed, with lots of zeros, then some "normal" spenders, and then a very small number of extreme spenders - we'll call these our outliers. And it's these outliers that are disproportionately increasing the variance of your average revenue per visitor estimate, hurting your power, and eventually making you wait months to estimate the impact of your experiment. 
 
 ## Outliers in A/B testing
 
 The previous section was a hypothetical story, but I think it's quite a common scenario. But what can be done? My usual steps are:
 
-1. First, check if the outlieres are real. It's often the case that outliers are actually just bad data, in which it might be reasonable to exclude them or fix them.
+1. First, check if the outliers are real. It's often the case that outliers are actually just bad data, in which it might be reasonable to exclude them or fix them.
 1. Do some variance reduction! [Cuped](https://booking.ai/how-booking-com-increases-the-power-of-online-experiments-with-cuped-995d186fff1d) is a very effective method of reducing the variance of your metric based on data from before the start of your experiment. It's always worth trying and it's about as close to a free lunch as you can get when it comes to improving A/B testing power. However, cuped reduces variance, not skew, so it's likely your power will still be hindered by the outliers.
-1. If the previous two steps doesn't reduce your variance sufficiently, then it's time to look at trimming or windsorizing. These are very powerful techniques, but come with a large drawback: **you are introducing bias into your estimates**. 
+1. If the previous two steps doesn't reduce your variance sufficiently, then it's time to look at trimming or winsorizing. These are very powerful techniques, but come with a large drawback: **you are introducing bias into your estimates**. This is especially problematic because here we are trimming or winsorizing on one side only (removing extremely high values) - you have no outliers on the lower side of the distribution.
 
 ::: {.callout-warning collapse="true"}
 ## Don't log transform!!
@@ -91,31 +91,31 @@ On almost every blog I see, when the issue of a skewed metric arises, someone wi
 This is because when you transform your metric, you also change the null hypothesis you are testing and therefore the interpretation of any effect you measure. For revenue, you really care about the effect on the **(arithmetic) mean** revenue per visitor, because improving this is what will translate into improving total revenue. However, the log transform means you are testing for an effect on the **geometric mean**, which is not the same and improving it does not necessarily translate into improving your bottom line, leading to potentially bad business decisions.
 :::
 
-Trimming and windsorizing are specifically designed to deal with outliers and make your estimator more robust. With trimming, you filter out all samples that are above some threshold, while with windsorizing you apply a cap, so that all values above a threshold are capped to that threshold. Both are very effective at reducing  variance, however because you are removing or capping the top X data points, you introruce a potentially large negative bias, so I usually treat it as a bit of a last resort.
+Trimming and winsorizing are specifically designed to deal with outliers and make your estimator more robust. With trimming, you filter out all samples that are above some threshold, while with winsorizing you apply a cap, so that all values above a threshold are capped to that threshold. Both are very effective at reducing  variance, however because you are removing or capping the top X data points, you introduce a potentially large negative bias, so I usually treat it as a bit of a last resort.
 
-But is this the best we can do? In this post I'm going to explore how we might formalize this problem with extreme value theory, and see if we can find some estimators that perform better than the trimmed or winsorized means. Here, by "better", I mean achieving similar levels of variance reduction, while introducing less bias.
+But is this the best we can do? In this post I'm going to explore how we might formalise this problem with extreme value theory, and see if we can find some estimators that perform better than the trimmed or winsorized means. Here, by "better", I mean achieving similar levels of variance reduction, while introducing less bias.
 
 ## Extreme value theory and power laws
 
 ::: {.callout-warning}
-## Disclamer 
+## Disclaimer 
 
-I'm far from an expert in extrme value theory, I've really only learned about the topic in the last few weeks. Take this section with a pinch of salt. 
+I'm far from an expert in extreme value theory, I've really only learned about the topic in the last few weeks. Take this section with a pinch of salt. 
 :::
 
-*Extreme value theory is a branch of statistics dealing with the extreme deviations from the median of probability distributions.*^[Sorry, this definition is fully plagarised from [Wikipedia](https://en.wikipedia.org/wiki/Extreme_value_theory#:~:text=Extreme%20value%20theory%20or%20extreme,extreme%20than%20any%20previously%20observed.), but it sounds relevant!] This is exactly what we are dealing with here - outliers are messing with our statistics. So perhaps there are some tools from extreme value theory that we can use to reduce the bias in our trimmed / winsorized mean? Say hello to the second theorem in extreme value theory:
+*Extreme value theory is a branch of statistics dealing with the extreme deviations from the median of probability distributions.*^[Sorry, this definition is fully plagiarised from [Wikipedia](https://en.wikipedia.org/wiki/Extreme_value_theory#:~:text=Extreme%20value%20theory%20or%20extreme,extreme%20than%20any%20previously%20observed.), but it sounds relevant!] This is exactly what we are dealing with here - outliers are messing with our statistics. So perhaps there are some tools from extreme value theory that we can use to reduce the bias in our trimmed / winsorized mean? Say hello to the second theorem in extreme value theory:
 
-> **Second Theorem in Extrme Value Theory**
+> **Second Theorem in Extreme Value Theory**
 > 
 > For a wide range of univariate probability distributions, the tail of that distribution can be well modelled by the Generalised Pareto distribution (GPD).
 > 
 > -- *@pickands1975statistical, @balkema1974residual*
 
-This sounds relavent! Perhaps we can describe the outliers in our skewed revenue  distribution as a GPD. So what does a GPD look like? 
+This sounds relevant! Perhaps we can describe the outliers in our skewed revenue  distribution as a GPD. So what does a GPD look like? 
 
 ### The Pareto and Generalised Pareto distributions
 
-The GPD is a more flexible version of the well known Pareto distribution [@powerlaws], also known as the 80-20 rule. Both the GPD and Pareto distribution are characterized by having "power law" tails, where for large X the distribution tends towards:
+The GPD is a more flexible version of the well known Pareto distribution [@powerlaws], also known as the 80-20 rule. Both the GPD and Pareto distribution are characterised by having "power law" tails, where for large X the distribution tends towards:
 
 $$
 P(x) \rightarrow x^{-m} \quad \text{as} \quad x \rightarrow \infty
@@ -144,7 +144,7 @@ The parameters of this distribution are more complex. In this post I'm going to 
 * $\sigma$ controls the scale of the distribution. 
 * $\xi$ controls the slope of the power law tail of the distribution. Comparing it to $\alpha$ for the Pareto distribution, $\xi = 1 / \alpha$.
 
-In the case where $\mu = \sigma / \xi$ the GPD is the same as the Pareto distributon.
+In the case where $\mu = \sigma / \xi$ the GPD is the same as the Pareto distribution.
 :::
 
 You can see the power law tails in @fig-pareto below, where I compare the Pareto and GPD distribution with the log-normal distribution, which does not have a power law tail:
@@ -163,7 +163,7 @@ plot!(log_norm, label="Log-Normal")
 plot!(xscale=:log10, yscale=:log10, ylabel="P(x)", xlabel="x", xrange=[1.0; 10000.0], yrange=[0.0000001; 0.4], legend=:bottomleft)
 ```
 
-The distributions are plotted on a log-log scale, and you can see that both the Pareto and GPD distributions are linear for large values of $x$ (indicating a power law), while the LogNormal distribution never becomes linear, it is always curving downwards.
+The distributions are plotted on a log-log scale, and you can see that both the Pareto and GPD distributions are linear for large values of $x$ (indicating a power law), while the log-normal distribution never becomes linear, it is always curving downwards.
 
 The GPD and Pareto distribution differ at small values of $x$, where the GPD is more flexible and can curve up or down, while the Pareto distribution remains a pure power law for all values of $x$.
 
@@ -179,13 +179,13 @@ Power law type distributions are interesting because depending on the slope of t
 
 : Three important scenarios for the sample mean and variance of the GPD and Pareto distributions. {#tbl-pareto-cases}
 
-**But what does infinte mean or infinite variance really mean?** The *sample* mean or variance is always finite, even if the population distribution from which that sample was drawn has infinite mean or variance. However, if the population distribution has infinite mean / variance, then the sample mean / variance will *not* converge as the sample size approaches infinty. 
+**But what does infinite mean or infinite variance really mean?** The *sample* mean or variance is always finite, even if the population distribution from which that sample was drawn has infinite mean or variance. However, if the population distribution has infinite mean / variance, then the sample mean / variance will *not* converge as the sample size approaches infinity. 
 
 This can be seen in @fig-inf-variance below, where I simulate estimating the sample variance as a function of sample size for the Log-Normal and GPD distributions, where the GPD distribution has infinite variance. Each grey line represents one sample, where I calculate the sample variance cumulatively, adding one point at a time. 
 
 ```{julia}
 #| label: fig-inf-variance
-#| fig-cap: "The sample variance vs sample size for the GPD (left) and Log-Normal distribution (right). The GPD used here has infinite population variance, so the sample variance does not converge as sample size increases."
+#| fig-cap: "The sample variance vs sample size for the GPD (left) and log-normal distribution (right). The GPD used here has infinite population variance, so the sample variance does not converge as sample size increases."
 
 function cumvar(x::Vector{Float64})
 	sum_x = cumsum(x)
@@ -242,11 +242,11 @@ $$
 t = \frac{\hat{\mu} - \mu_0}{\hat{\sigma} / \sqrt{n}}
 $$
 
-Where $\hat{\mu}$ is the sample mean, $\hat{\sigma}^2$ is the sample variance and $n$ is the sample size. Therefore, refering back to the three cases from @tbl-pareto-cases:
+Where $\hat{\mu}$ is the sample mean, $\hat{\sigma}^2$ is the sample variance and $n$ is the sample size. Therefore, referring back to the three cases from @tbl-pareto-cases:
 
 * If we are in case (1) where both the mean and variance are infinite, then there is basically no hope for any inference about the mean, since it's infinite! If you have a distribution with such large outliers that you are in this case, then you'll always struggle to perform any inference about it's mean. I'm not even sure what the interpretation of such an analysis would be...
-* If we are in case (3) then both the mean and variance are finite. This is trivial, and it's likely that the regular t-test based on the sample mean and variance will perform fine. Probably you're data wouldn't even look like it has significant outliers.
-* Case (2) is the interesting one. The mean is finite, so we may want to perform inference on it, however the variance is infinite, which will break the t statisitc which uses the sample variance. 
+* If we are in case (3) then both the mean and variance are finite. This is trivial, and it's likely that the regular t-test based on the sample mean and variance will perform fine. Probably your data wouldn't even look like it has significant outliers.
+* Case (2) is the interesting one. The mean is finite, so we may want to perform inference on it, however the variance is infinite, which will break the t statistic which uses the sample variance. 
 
 So to summarise:
 
@@ -277,7 +277,7 @@ Is there a way we can do this without the sample variance? Yes, with maximum lik
 1. You have a sample of size $n$: $\left[ X_1, X_2, X_3, ... X_n \right]$
 1. Assume a parametric distribution for your population: $P(x|\theta)$, where $\theta$ is a vector of the parameters of the distribution.
 1. Define the Log Likelihood as: $L(\theta) = \sum_{j=1}^n \ln{(P(X_j|\theta))}$
-1. Estimate $\hat{\theta}$ by maximizing $L(\theta)$: $\hat{\theta} = \text{arg max}_{\theta \in \Theta} L(\theta)$
+1. Estimate $\hat{\theta}$ by maximising $L(\theta)$: $\hat{\theta} = \text{arg max}_{\theta \in \Theta} L(\theta)$
 1. Calculate the [hessian matrix](https://en.wikipedia.org/wiki/Hessian_matrix) of $L(\theta)$, $H(\theta)$. This is the matrix of second derivatives of $L$.
 1. Use the hessian matrix to estimate the covariance matrix for the standard errors of $\hat{\theta}$ as 
 $\hat{\Sigma} = -H(\hat{\theta})^{-1}$, from [@covmle].
@@ -299,7 +299,7 @@ Where $\sigma_i^2$ are the diagonal elements of $\hat{\Sigma}$.
 
 This method is nice because it doesn't require us to estimate the sample variance at any point, so we are able to estimate the mean and standard error on the mean, even when the population variance is infinite!
 
-This method does, however, have some drawbacks - you need to make an assumption about the parameteric form of the population distribution, and if that is incorrect it's very likely the estimator will be biased. Also, even if the parametric form is correctly specified, it's usually the case that the maximum likelihood estimator is not unbiased by default, it usually requires some bias correction to achieve that. This goes beyond the scope of this blog post, but would certainly be possible to explore.
+This method does, however, have some drawbacks - you need to make an assumption about the parametric form of the population distribution, and if that is incorrect it's very likely the estimator will be biased. Also, even if the parametric form is correctly specified, it's usually the case that the maximum likelihood estimator is not unbiased by default, it usually requires some bias correction to achieve that. This goes beyond the scope of this blog post, but would certainly be possible to explore.
 
 Now let's see how this will work with the GPD and Pareto distributions.
 
@@ -574,7 +574,7 @@ end
 
 #### Testing on Pareto data
 
-First let's look at how the estimators perform on data that came from a Pareto distribution. As expected, @fig-evt-estimator-comparison-pareto shows that the baseline method of using the sample mean doesn't work well. It has skewed estimates, with high variance. However, both the hill estimator and the GPD estimator perform much better, with the estimates centered on the true population mean and with much lower variance.
+First let's look at how the estimators perform on data that came from a Pareto distribution. As expected, @fig-evt-estimator-comparison-pareto shows that the baseline method of using the sample mean doesn't work well. It has skewed estimates, with high variance. However, both the hill estimator and the GPD estimator perform much better, with the estimates centred on the true population mean and with much lower variance.
 
 ```{julia}
 #| label: fig-evt-estimator-comparison-pareto
@@ -673,7 +673,7 @@ We see below that the Hill estimator is good for both sample sizes, while the GP
 
 ```{julia}
 #| label: fig-evt-estimator-normed-comparison-pareto
-#| fig-cap: "A comparison of the standardised errors of the different estimators for a Pareto population distribution. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
+#| fig-cap: "A comparison of the standardised residuals of the different estimators for a Pareto population distribution. The t-test assumes that this statistic is approximately t-distributed, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
 
 function plot_standardized_errors(sim::Simulation)
 	err = standardized_error(sim)
@@ -706,7 +706,7 @@ So overall the Hill and GPD estimators work well for Pareto distributed data, wi
 
 Here I do the same analysis again, but this time using data coming from a GPD distribution for my testing. This distribution is more complex, so will be a harder test for the Hill estimator, as it breaks the parametric assumption we made. 
 
-First looking at the distributions of the mean estimates, we see again that the mean / variance estimator is very skewed, and the GPD estimator looks good. However, this time the Hill estimator is **very** bad. It's not skewed - the estimates have a nice, normally distributed shape, but they are not even nearly centered on the true population mean. 
+First looking at the distributions of the mean estimates, we see again that the mean / variance estimator is very skewed, and the GPD estimator looks good. However, this time the Hill estimator is **very** bad. It's not skewed - the estimates have a nice, normally distributed shape, but they are not even nearly centred on the true population mean. 
 
 ```{julia}
 #| label: fig-evt-estimator-comparison-gpd
@@ -726,7 +726,7 @@ end
 plot(p..., layout=(length(estimators), length(n_samples)))
 ```
 
-This is an example of the bias that can easily be introduced with this method. Becuase we made an assumption about the parametric form of the population distribution, and got that assumption wrong, the mean estimate is highly biased. 
+This is an example of the bias that can easily be introduced with this method. Because we made an assumption about the parametric form of the population distribution, and got that assumption wrong, the mean estimate is highly biased. 
 
 You can see it clearly in the MSE and bias results in figure @fig-evt-estimator-stats-comparison-gpd. The hill estimator has low variance, but high bias, meaning that overall the MSE is much worse than the GPD estimator. Interestingly, even with this high bias it still has a lower MSE than the baseline sample mean / variance estimator, because the variance of the baseline mean/variance estimator is so high! This wouldn't hold in general though, probably with a higher sample size or slightly different parameters the hill estimator would perform the worst of all.
 
@@ -754,7 +754,7 @@ Finally we can check the standardised residuals again, and as expected the hill 
 
 ```{julia}
 #| label: fig-evt-estimator-normed-comparison-gpd
-#| fig-cap: "A comparison of the standardised errors of the different estimators for a GPD population distribution, where the standardised error is the difference between the estimated mean and the population mean, divided by the estimated standard deviation. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
+#| fig-cap: "A comparison of the standardised residuals of the different estimators for a GPD population distribution. The t-test assumes that this statistic is approximately t-distributied, with d.o.f = samples size - 1. This expected distribution is shown in red. If the distribution matches, then you can expect the confidence intervals you calculate to have good coverage."
 p = Array{Plots.Plot{Plots.GRBackend}}(undef, size(gpd_sims))
 for i in 1:length(n_samples)
 	for j in 1:length(estimators)
@@ -769,13 +769,13 @@ end
 plot(p..., layout=(length(estimators), length(n_samples)))
 ```
 
-So it seems that the GPD distribution works better in general, but if the assumptions of the hill estimator are met (i.e. the samples come from a Pareto distribution), then the hill estimator is better. Of course, the GPD estimator will fail in the same way that the hill estimator did if we were to test it on a dataset that breaks it's assumptions, it's just a more flexible distribution so its assumptions are less likely to break. 
+So it seems that the GPD distribution works better in general, but if the assumptions of the hill estimator are met (i.e. the samples come from a Pareto distribution), then the hill estimator is better. Of course, the GPD estimator will fail in the same way that the hill estimator did if we were to test it on a dataset that breaks its assumptions, it's just a more flexible distribution so its assumptions are less likely to break. 
 
 ## Appling extreme value theory to the trimmed mean
 
 Now as both the Hill estimator and GDP estimator outperform the simple mean/variance estimator for power-law type data, we can try to apply them to our revenue A/B testing problem. However, we want to use the new estimators **only in the tail**. The rest of the distribution is unlikely to be power-law distributed, so the new estimators would fail there.
 
-This is where the comparison with the trimmed and windsorised means comes in. In both of those methods, an arbitrary threshold is chosen, and all values that are above that threshold are designated as outliers and either ignored or capped. But what if we were to keep the outliers as they are, and use our new estimators on those, while the non-outliers are estimated by the regular mean-variance estimator. We can then combine the two estimates to get the overall estimate of the mean and the standard error for the whole sample.
+This is where the comparison with the trimmed and winsorized means comes in. In both of those methods, an arbitrary threshold is chosen, and all values that are above that threshold are designated as outliers and either ignored or capped. But what if we were to keep the outliers as they are, and use our new estimators on those, while the non-outliers are estimated by the regular mean-variance estimator. We can then combine the two estimates to get the overall estimate of the mean and the standard error for the whole sample.
 
 ::: {.callout-tip collapse="true"}
 ## Detailed method with maths
@@ -859,8 +859,8 @@ Here I will compare the following estimators:
 1. **The simple mean / variance estimator.** This is the standard method of estimating the population mean used in the t-test. It is independent of the trimming quintile.
 1. **The trimmed mean / variance estimator.** The data is trimmed at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are excluded.
 1. **The winsorized mean / variance estimator.** The data is winsorized at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are capped at the trimming quintile.
-1. **The hill tail estimator.** This estimator uses the hill estimator for the samples above the trimming quntile, and the sample mean / variance estimator for the samples below, and then merges the results together.
-1. **The GPD tail estimator.** This estimator uses the GPD estimator for the samples above the trimming quntile, and the sample mean / variance estimator for the samples below, and then merges the results together.
+1. **The hill tail estimator.** This estimator uses the hill estimator for the samples above the trimming quantile, and the sample mean / variance estimator for the samples below, and then merges the results together.
+1. **The GPD tail estimator.** This estimator uses the GPD estimator for the samples above the trimming quantile, and the sample mean / variance estimator for the samples below, and then merges the results together.
 
 The simulation results are shown below in @fig-trimming-sim-by-metric.
 
@@ -1157,11 +1157,11 @@ These results are interesting and in my opinion very promising for this approach
 
 * The simple mean is the least biased of all the methods, but does not have good coverage of standardised MSE, indicating that the confidence intervals would not work well for this estimator, breaking our A/B tests.
 * The trimmed and winsorized means both behave as expected. The more we trim, the bias increases, and the variance decreases. Overall, the increase in bias is larger than the decrease in variance, meaning that the MSE gets worse. And the bias is so large that the coverage is terrible - the confidence intervals never contain the true population mean. This demonstrates why the trimmed and winsorized means are so difficult to use, because while the variance decreases, you introduce significant bias.
-* Our new estimators seem to work well, as long as the trimming quntile is not too large. Both have good coverage and standardised MSE, meaning that can be more reliably used as A/B testing metrics. The variance, bias and MSE are closer to the values for the simple mean. This means we get similar performance on average, but with a better behaved estimator that we can construct reliable confidence intervals for.
+* Our new estimators seem to work well, as long as the trimming quantile is not too large. Both have good coverage and standardised MSE, meaning that can be more reliably used as A/B testing metrics. The variance, bias and MSE are closer to the values for the simple mean. This means we get similar performance on average, but with a better behaved estimator that we can construct reliable confidence intervals for.
 * The hill tail estimator works better than the GPD tail estimator as long as the trimming quintile is kept below ~1%. Above that, the coverage of the hill estimator deteriorates, while the GPD tail estimator maintains its coverage until ~10%. This is expected because the GPD tail estimator is a more general distribution, so can describe a bigger portion of the tail which is not exactly Pareto distributed. 
 * The GPD tail estimator is less robust. This is likely because of the numerical estimation method. Between 1% and 10% the variance, bias and MSE go extremely high. 
 
-Overall, based on this, I think the hill estimator has the most promise. While it breaks down at high trimming quantiles, as long as the correct trimming quantile is chosen it works well. It is also computationally simpler than the GPD estimator, because it has an analytical soltuion.
+Overall, based on this, I think the hill estimator has the most promise. While it breaks down at high trimming quantiles, as long as the correct trimming quantile is chosen it works well. It is also computationally simpler than the GPD estimator, because it has an analytical solution.
 
 ## Summary
 
