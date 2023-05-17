@@ -9,7 +9,6 @@ website:
   open-graph: true
   google-analytics:
     tracking-id: "G-C1CWYHSK2R"
-    storage: none
 
   repo-url: https://github.com/sam-bailey/sam-bailey.github.io
   repo-branch: master
