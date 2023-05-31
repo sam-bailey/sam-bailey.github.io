@@ -1,5 +1,9 @@
 [
   {
+    "listing": "/publications.html",
+    "items": []
+  },
+  {
     "listing": "/index.html",
     "items": [
       "/posts/trimmed_mean_extreme_value_theory/index.html",
