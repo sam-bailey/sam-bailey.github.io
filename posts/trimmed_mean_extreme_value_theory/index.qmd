@@ -856,9 +856,9 @@ Again I perform very similar simulations to the previous section - estimating th
 
 Here I will compare the following estimators:
 
-1. **The simple mean / variance estimator.** This is the standard method of estimating the population mean used in the t-test. It is independent of the trimming quintile.
-1. **The trimmed mean / variance estimator.** The data is trimmed at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are excluded.
-1. **The winsorized mean / variance estimator.** The data is winsorized at the trimming quintile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quintile are capped at the trimming quintile.
+1. **The simple mean / variance estimator.** This is the standard method of estimating the population mean used in the t-test. It is independent of the trimming quantile.
+1. **The trimmed mean / variance estimator.** The data is trimmed at the trimming quantile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quantile are excluded.
+1. **The winsorized mean / variance estimator.** The data is winsorized at the trimming quantile before being fed into the sample mean / variance estimator, meaning any samples above the trimming quantile are capped at the trimming quantile.
 1. **The hill tail estimator.** This estimator uses the hill estimator for the samples above the trimming quantile, and the sample mean / variance estimator for the samples below, and then merges the results together.
 1. **The GPD tail estimator.** This estimator uses the GPD estimator for the samples above the trimming quantile, and the sample mean / variance estimator for the samples below, and then merges the results together.
 
@@ -1155,10 +1155,10 @@ plot(p1,p2,p3,p4,p5,p6)
 
 These results are interesting and in my opinion very promising for this approach!
 
-* The simple mean is the least biased of all the methods, but does not have good coverage of standardised MSE, indicating that the confidence intervals would not work well for this estimator, breaking our A/B tests.
+* The simple mean is the least biased of all the methods, but does not have good coverage or standardised MSE, indicating that the confidence intervals would not work well for this estimator, breaking our A/B tests.
 * The trimmed and winsorized means both behave as expected. The more we trim, the bias increases, and the variance decreases. Overall, the increase in bias is larger than the decrease in variance, meaning that the MSE gets worse. And the bias is so large that the coverage is terrible - the confidence intervals never contain the true population mean. This demonstrates why the trimmed and winsorized means are so difficult to use, because while the variance decreases, you introduce significant bias.
 * Our new estimators seem to work well, as long as the trimming quantile is not too large. Both have good coverage and standardised MSE, meaning that can be more reliably used as A/B testing metrics. The variance, bias and MSE are closer to the values for the simple mean. This means we get similar performance on average, but with a better behaved estimator that we can construct reliable confidence intervals for.
-* The hill tail estimator works better than the GPD tail estimator as long as the trimming quintile is kept below ~1%. Above that, the coverage of the hill estimator deteriorates, while the GPD tail estimator maintains its coverage until ~10%. This is expected because the GPD tail estimator is a more general distribution, so can describe a bigger portion of the tail which is not exactly Pareto distributed. 
+* The hill tail estimator works better than the GPD tail estimator as long as the trimming quantile is kept below ~1%. Above that, the coverage of the hill estimator deteriorates, while the GPD tail estimator maintains its coverage until ~10%. This is expected because the GPD tail estimator is a more general distribution, so can describe a bigger portion of the tail which is not exactly Pareto distributed. 
 * The GPD tail estimator is less robust. This is likely because of the numerical estimation method. Between 1% and 10% the variance, bias and MSE go extremely high. 
 
 Overall, based on this, I think the hill estimator has the most promise. While it breaks down at high trimming quantiles, as long as the correct trimming quantile is chosen it works well. It is also computationally simpler than the GPD estimator, because it has an analytical solution.
