@@ -5,10 +5,11 @@ categories: [Python]
 image: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png
 jupyter: "python3"
 description: "I try to answer this question by pitting Betfair against Five-thirty-eight in a variety of sports."
-draft: false
+draft: true
 ---
 
 ```{python}
+#| output: false
 !pip install numpy pandas matplotlib
 ```
 
