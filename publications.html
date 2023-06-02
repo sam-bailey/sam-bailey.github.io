@@ -75,9 +75,9 @@ ul.task-list li input[type="checkbox"] {
     }
 
     const options = {
-      valueNames: ['listing-title','listing-href','listing-date','listing-journal','listing-topic','listing-description',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] }],
+      valueNames: ['listing-title','listing-date','listing-author','listing-subtitle','listing-description','listing-reading-time','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
       
-      searchColumns: ["listing-title","listing-href","listing-date","listing-journal","listing-topic","listing-description"],
+      searchColumns: ["listing-title","listing-path","listing-date","listing-subtitle","listing-categories","listing-description"],
     };
 
     window['quarto-listings'] = window['quarto-listings'] || {};
@@ -212,83 +212,209 @@ cookieconsent.run({
 
 
 
-<div class="quarto-listing quarto-listing-container-custom" id="listing-listing">
-<div class="link-cards">
-<div class="card">
-<div class="card-body">
-<section id="partial-blockout-experiments-for-a-two-sided-marketplace" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="partial-blockout-experiments-for-a-two-sided-marketplace"><a href="https://booking.ai/partial-blockout-experiments-for-a-two-sided-marketplace-a573dfe32696">Partial blockout experiments for a two sided marketplace</a></h4>
-</section>
-<section id="jul-1-2022-booking.ai-medium-data-science" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="jul-1-2022-booking.ai-medium-data-science">Jul 1, 2022 | Booking.ai (Medium) | Data Science</h6>
-</section>
+<div class="quarto-listing quarto-listing-container-default" id="listing-listing">
+<div class="list quarto-listing-default">
+<div class="quarto-post image-right" data-index="0" data-categories="Data Science" data-listing-date-sort="1656633600000">
+<div class="body">
+<a href="https://booking.ai/partial-blockout-experiments-for-a-two-sided-marketplace-a573dfe32696">
+<h3 class="no-anchor listing-title">
+Partial blockout experiments for a two sided marketplace
+</h3>
+<div class="listing-subtitle">
+Booking.ai (Medium)
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Data Science'); return false;">
+Data Science
+</div>
+</div>
+<a href="https://booking.ai/partial-blockout-experiments-for-a-two-sided-marketplace-a573dfe32696">
+<div class="listing-description">
 <p>How can a two sided marketplace run experiments that generate insights for both sides of the marketplace simultaneously? At booking.com I developed an experiment design where we randomise customer + accommodation provider combinations into control and treatment groups, instead of only customers or only accommodation providers. This design generates unique insights, and allowed us to learn the impact a feature is having on both sides of our marketplace from a single experiment.</p>
 </div>
+</a>
 </div>
-<div class="card">
-<div class="card-body">
-<section id="increasing-the-sensitivity-of-experiments-with-rank-transformation" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="increasing-the-sensitivity-of-experiments-with-rank-transformation"><a href="https://booking.ai/increasing-sensitivity-of-experiments-with-the-rank-transformation-draft-c01aff70b255">Increasing the sensitivity of experiments with rank transformation</a></h4>
-</section>
-<section id="jul-1-2020-booking.ai-medium-data-science" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="jul-1-2020-booking.ai-medium-data-science">Jul 1, 2020 | Booking.ai (Medium) | Data Science</h6>
-</section>
-<p>When running online controlled experiments (A/B testing), ensuring that your experiment is sensitive enough to changes in your decision making metric is crucial. However, if your metric is very noisy, this can mean running your A/B tests for a long time, slowing down development velocity. In this project I developed a method to increase the sensitivity of A/B tests, and therefore reduce experiment runtimes, by applying a simple rank transforming on your metric.</p>
+<div class="metadata">
+<a href="https://booking.ai/partial-blockout-experiments-for-a-two-sided-marketplace-a573dfe32696">
+<div class="listing-date">
+Jul 1, 2022
+</div>
+</a>
 </div>
 </div>
-<div class="card">
-<div class="card-body">
-<section id="the-identification-of-alpha-clustered-doorway-states-in-444852-ti-using-machine-learning" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="the-identification-of-alpha-clustered-doorway-states-in-444852-ti-using-machine-learning"><a href="https://link.springer.com/article/10.1140/epja/s10050-021-00357-3">The identification of alpha-clustered doorway states in 44,48,52-Ti using machine learning</a></h4>
-</section>
-<section id="mar-27-2021-the-european-physical-journal-a-nuclear-physics" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="mar-27-2021-the-european-physical-journal-a-nuclear-physics">Mar 27, 2021 | The European Physical Journal A | Nuclear Physics</h6>
-</section>
+<div class="quarto-post image-right" data-index="1" data-categories="Nuclear Physics" data-listing-date-sort="1616803200000">
+<div class="body">
+<a href="https://link.springer.com/article/10.1140/epja/s10050-021-00357-3">
+<h3 class="no-anchor listing-title">
+The identification of alpha-clustered doorway states in 44,48,52-Ti using machine learning
+</h3>
+<div class="listing-subtitle">
+The European Physical Journal A
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Nuclear Physics'); return false;">
+Nuclear Physics
+</div>
+</div>
+<a href="https://link.springer.com/article/10.1140/epja/s10050-021-00357-3">
+<div class="listing-description">
 <p>A novel experimental analysis method has been developed, making use of the continuous wavelet transform and machine learning to rapidly identify alpha-clustering in nuclei in regions of high nuclear state density. This technique was applied to resonant scattering measurements of the 4-He(40,44,48-Ca, alpha) resonant reactions, allowing the 𝛼-cluster structure of 44,48,52-Ti to be investigated. Fragmented alpha-clustering was identified in 44-Ti and 52-Ti, while the results for 48-Ti were less conclusive, but suggest no such clustering.</p>
 </div>
+</a>
 </div>
-<div class="card">
-<div class="card-body">
-<section id="extracting-the-spectral-signature-of-α-clustering-in-444852-ti-using-a-continuous-wavelet-transform" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="extracting-the-spectral-signature-of-α-clustering-in-444852-ti-using-a-continuous-wavelet-transform"><a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.100.051302">Extracting the spectral signature of α clustering in 44,48,52-Ti using a continuous wavelet transform</a></h4>
-</section>
-<section id="nov-1-2019-physical-review-c-nuclear-physics" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="nov-1-2019-physical-review-c-nuclear-physics">Nov 1, 2019 | Physical Review C | Nuclear Physics</h6>
-</section>
+<div class="metadata">
+<a href="https://link.springer.com/article/10.1140/epja/s10050-021-00357-3">
+<div class="listing-date">
+Mar 27, 2021
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="2" data-categories="Data Science" data-listing-date-sort="1593561600000">
+<div class="body">
+<a href="https://booking.ai/increasing-sensitivity-of-experiments-with-the-rank-transformation-draft-c01aff70b255">
+<h3 class="no-anchor listing-title">
+Increasing the sensitivity of experiments with rank transformation
+</h3>
+<div class="listing-subtitle">
+Booking.ai (Medium)
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Data Science'); return false;">
+Data Science
+</div>
+</div>
+<a href="https://booking.ai/increasing-sensitivity-of-experiments-with-the-rank-transformation-draft-c01aff70b255">
+<div class="listing-description">
+<p>When running online controlled experiments (A/B testing), ensuring that your experiment is sensitive enough to changes in your decision making metric is crucial. However, if your metric is very noisy, this can mean running your A/B tests for a long time, slowing down development velocity. In this project I developed a method to increase the sensitivity of A/B tests, and therefore reduce experiment runtimes, by applying a simple rank transforming on your metric.</p>
+</div>
+</a>
+</div>
+<div class="metadata">
+<a href="https://booking.ai/increasing-sensitivity-of-experiments-with-the-rank-transformation-draft-c01aff70b255">
+<div class="listing-date">
+Jul 1, 2020
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="3" data-categories="Nuclear Physics" data-listing-date-sort="1572566400000">
+<div class="body">
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.100.051302">
+<h3 class="no-anchor listing-title">
+Extracting the spectral signature of α clustering in 44,48,52-Ti using a continuous wavelet transform
+</h3>
+<div class="listing-subtitle">
+Physical Review C
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Nuclear Physics'); return false;">
+Nuclear Physics
+</div>
+</div>
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.100.051302">
+<div class="listing-description">
 <p>A novel technique has been developed, making use of the continuous wavelet transform to identify α-clustered states from resonant scattering measurements in regions of high nuclear state density. This technique expedites the investigation of α clustering in medium mass and heavy nuclei where the role that α clustering plays in the structure of the nucleus is poorly understood. Here, we report the application of this technique to measurements of the 4-He(40, 44, 48-Ca, α) resonant reactions, leading to an assessment of the α-cluster structure of 44, 48, 52-Ti. Clustering involving α particles was identified in 44-Ti and 52-Ti but was observed to break down in 48-Ti. The implications of these results are discussed.</p>
 </div>
+</a>
 </div>
-<div class="card">
-<div class="card-body">
-<section id="alpha-clustering-in-ti-isotopes-404448-ca-alpha-resonant-scattering" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="alpha-clustering-in-ti-isotopes-404448-ca-alpha-resonant-scattering"><a href="http://www.epj-conferences.org/articles/epjconf/pdf/2016/08/epjconf_fb2016_08002.pdf">Alpha clustering in Ti isotopes: 40,44,48-Ca + Alpha resonant scattering</a></h4>
-</section>
-<section id="mar-25-2016-epj-web-of-conferences-nuclear-physics" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="mar-25-2016-epj-web-of-conferences-nuclear-physics">Mar 25, 2016 | EPJ Web of Conferences | Nuclear Physics</h6>
-</section>
+<div class="metadata">
+<a href="https://journals.aps.org/prc/abstract/10.1103/PhysRevC.100.051302">
+<div class="listing-date">
+Nov 1, 2019
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="4" data-categories="Nuclear Physics" data-listing-date-sort="1458864000000">
+<div class="body">
+<a href="http://www.epj-conferences.org/articles/epjconf/pdf/2016/08/epjconf_fb2016_08002.pdf">
+<h3 class="no-anchor listing-title">
+Alpha clustering in Ti isotopes: 40,44,48-Ca + Alpha resonant scattering
+</h3>
+<div class="listing-subtitle">
+EPJ Web of Conferences
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Nuclear Physics'); return false;">
+Nuclear Physics
+</div>
+</div>
+<a href="http://www.epj-conferences.org/articles/epjconf/pdf/2016/08/epjconf_fb2016_08002.pdf">
+<div class="listing-description">
 <p>Measurements were made of the 4-He(40,44,48-Ca,α) resonant scattering reactions at 180 degrees and up to E ∼11.5 MeV, using the Thick Target Inverse Kinematics technique. These measurements are discussed, with a focus on assessing their usefulness for investigating α-clustering in medium mass 44,48,52-Ti nuclei.</p>
 </div>
+</a>
 </div>
-<div class="card">
-<div class="card-body">
-<section id="alpha-clustering-in-18-f" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="alpha-clustering-in-18-f"><a href="http://iopscience.iop.org/1742-6596/569/1/012053/">Alpha clustering in 18-F</a></h4>
-</section>
-<section id="dec-16-2014-journal-of-physics-conference-series-nuclear-physics" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="dec-16-2014-journal-of-physics-conference-series-nuclear-physics">Dec 16, 2014 | Journal of Physics: Conference Series | Nuclear Physics</h6>
-</section>
+<div class="metadata">
+<a href="http://www.epj-conferences.org/articles/epjconf/pdf/2016/08/epjconf_fb2016_08002.pdf">
+<div class="listing-date">
+Mar 25, 2016
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="5" data-categories="Nuclear Physics" data-listing-date-sort="1418688000000">
+<div class="body">
+<a href="http://iopscience.iop.org/1742-6596/569/1/012053/">
+<h3 class="no-anchor listing-title">
+Alpha clustering in 18-F
+</h3>
+<div class="listing-subtitle">
+Journal of Physics: Conference Series
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Nuclear Physics'); return false;">
+Nuclear Physics
+</div>
+</div>
+<a href="http://iopscience.iop.org/1742-6596/569/1/012053/">
+<div class="listing-description">
 <p>We review some of the key experimental and theoretical studies of α-clustering in 18-F. Particular attention is given to the 4p-2h nature of such α-clustered states, and the interaction between the holes and clusters is examined in terms of both weak and strong coupling regimes. The experimental work focuses on α-transfer spectroscopy and α resonant scattering as tools for investigating α-clustering.</p>
 </div>
+</a>
 </div>
-<div class="card">
-<div class="card-body">
-<section id="energy-levels-of-18-f-from-the-14-n-alpha-resonant-reaction" class="level4 card-title">
-<h4 class="anchored" data-anchor-id="energy-levels-of-18-f-from-the-14-n-alpha-resonant-reaction"><a href="http://journals.aps.org/prc/abstract/10.1103/PhysRevC.90.024302">Energy Levels of 18-F from the 14-N + Alpha Resonant Reaction</a></h4>
-</section>
-<section id="aug-5-2014-physical-review-c-nuclear-physics" class="level6 card-subtitle text-muted">
-<h6 class="anchored" data-anchor-id="aug-5-2014-physical-review-c-nuclear-physics">Aug 5, 2014 | Physical Review C | Nuclear Physics</h6>
-</section>
+<div class="metadata">
+<a href="http://iopscience.iop.org/1742-6596/569/1/012053/">
+<div class="listing-date">
+Dec 16, 2014
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="6" data-categories="Nuclear Physics" data-listing-date-sort="1407196800000">
+<div class="body">
+<a href="http://journals.aps.org/prc/abstract/10.1103/PhysRevC.90.024302">
+<h3 class="no-anchor listing-title">
+Energy Levels of 18-F from the 14-N + Alpha Resonant Reaction
+</h3>
+<div class="listing-subtitle">
+Physical Review C
+</div>
+</a>
+<div class="listing-categories">
+<div class="listing-category" onclick="window.quartoListingCategory('Nuclear Physics'); return false;">
+Nuclear Physics
+</div>
+</div>
+<a href="http://journals.aps.org/prc/abstract/10.1103/PhysRevC.90.024302">
+<div class="listing-description">
 <p>Measurements were made of the differential cross section of the resonant reactions 4-He(14-N,α) and, 4-He(14-N,d)16-O with the intention of investigating the compound nucleus 18-F. These measurements were performed in inverse kinematics at a center-of-mass scattering angle of θ =180 degrees by using a thick 4-He gas target and a 14-N beam. Data were recorded which covered 18-F excitation energies from 5.5–16 MeV. An R-matrix analysis was performed on the data up to 9 MeV, and the energies, spins, parities, and partial widths were extracted. Nine new states have been identified in 18-F based on this analysis between 8.326 and 8.915 MeV.</p>
+</div>
+</a>
+</div>
+<div class="metadata">
+<a href="http://journals.aps.org/prc/abstract/10.1103/PhysRevC.90.024302">
+<div class="listing-date">
+Aug 5, 2014
+</div>
+</a>
 </div>
 </div>
 </div>
