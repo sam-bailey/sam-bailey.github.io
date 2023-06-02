@@ -1,0 +1,33 @@
+---
+title: "Which predicts better, markets or machine learning models?"
+date: "2022-12-08"
+categories: [Python]
+image: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png
+jupyter: "python3"
+description: "I try to answer this question by pitting Betfair against Five-thirty-eight in a variety of sports."
+draft: false
+---
+
+```{python}
+!pip install numpy pandas matplotlib
+```
+
+This is a post with executable code. Let's try some python.
+
+```{python}
+
+import numpy as np
+import pylab as plt
+import pandas as pd
+
+x = np.linspace(0.0,3.0,100)
+y = np.sin(x)
+plt.plot(x, y)
+```
+
+# Next Section
+
+Hello
+
+## Subheading
+
