@@ -6,6 +6,7 @@ website:
   favicon: favicon.png
   twitter-card: true
   open-graph: true
+  page-footer: "Copyright 2023, Sam Bailey.<br>Views expressed are my own and do not reflect the views of my employer." 
 
   repo-url: https://github.com/sam-bailey/sam-bailey.github.io
   repo-branch: master
@@ -19,7 +20,7 @@ website:
       - publications.qmd
       - about.qmd
       - icon: github
-        href: https://github.com/sam-bailey
+        href: https://github.com/sam-bailey/sam-bailey.github.io
       - icon: linkedin
         href: https://www.linkedin.com/in/sam-bailey-data-scientist
 format:
