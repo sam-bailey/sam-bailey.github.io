@@ -11,6 +11,7 @@ website:
   repo-url: https://github.com/sam-bailey/sam-bailey.github.io
   repo-branch: master
   site-url: https://sambailey.me
+  search: false
   navbar:
     title: Sam Bailey | Data Science
     background: light
