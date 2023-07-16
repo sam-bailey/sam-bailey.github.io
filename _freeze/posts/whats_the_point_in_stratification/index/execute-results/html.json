@@ -1,0 +1,11 @@
+{
+  "hash": "fa1befc10c4a2fd3d671a3ec0a066bdd",
+  "result": {
+    "markdown": "---\ntitle: 'Which predicts better, markets or machine learning models?'\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png\ndescription: I try to answer this question by pitting Betfair against Five-thirty-eight in a variety of sports.\ndraft: true\n---\n\n\n\nThis is a post with executable code. Let's try some python.\n\n::: {.cell execution_count=2}\n\n::: {.cell-output .cell-output-display}\n![](index_files/figure-html/cell-3-output-1.png){width=571 height=411}\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\n",
+    "supporting": [
+      "index_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}
