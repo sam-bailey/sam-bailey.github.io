@@ -1,7 +1,7 @@
 {
-  "hash": "a9b3c15f8cc079b518beacffc9cec5d8",
+  "hash": "65a6157c6a77849cb1b7c00a57af5695",
   "result": {
-    "markdown": "---\ntitle: What is the point in stratified sampling?\ndate: '2023-06-25'\ncategories:\n  - Python\nimage: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png\ndescription: I try to work out if sample stratification actuall helps A/B testing.\ndraft: true\n---\n\n\n\nThis is a post with executable code. Let's try some python.\n\n\n\n\n\n::: {.cell execution_count=4}\n\n::: {.cell-output .cell-output-stdout}\n```\n['__annotations__', '__class__', '__dataclass_fields__', '__dataclass_params__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'ate', 'conv_rate_effect', 'n_segments', 'sample']\n```\n:::\n:::\n\n\n::: {.cell execution_count=5}\n\n::: {.cell-output .cell-output-stdout}\n```\n0.1\n```\n:::\n:::\n\n\n# Next Section\n\nHello\n\n## Subheading\n\n",
+    "markdown": "---\ntitle: 'Which predicts better, markets or machine learning models?'\ndate: '2022-12-08'\ncategories:\n  - Python\nimage: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png\ndescription: I try to answer this question by pitting Betfair against Five-thirty-eight in a variety of sports.\ndraft: true\n---\n\n",
     "supporting": [
       "index_files"
     ],

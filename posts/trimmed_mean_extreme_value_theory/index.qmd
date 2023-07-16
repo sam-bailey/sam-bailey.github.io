@@ -3,7 +3,6 @@ title: "Can we do better than the trimmed mean?"
 date: "2023-05-13"
 categories: [Julia, Experimentation, Statistics]
 image: ../../_freeze/posts/trimmed_mean_extreme_value_theory/index/figure-html/fig-samples-output-1.svg
-jupyter: "julia-1.9"
 bibliography: references.bib
 cap-location: margin
 abstract: Testing out some ideas for dealing with outliers in A/B testing, comparing the trimmed / winsorized means with a new estimator based on a combination of the Pareto or Generalised Pareto distributions and the delta method.

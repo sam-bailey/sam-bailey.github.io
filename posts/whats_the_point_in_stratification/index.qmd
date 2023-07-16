@@ -1,16 +1,16 @@
 ---
-title: "Which predicts better, markets or machine learning models?"
-date: "2022-12-08"
+title: "What is the point in stratified sampling?"
+date: "2023-06-25"
 categories: [Python]
 image: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png
 jupyter: "python3"
-description: "I try to answer this question by pitting Betfair against Five-thirty-eight in a variety of sports."
+description: "I try to work out if sample stratification actuall helps A/B testing."
 draft: true
 ---
 
 ```{python}
 #| output: false
-!pip install numpy pandas matplotlib
+!pip install numpy pandas matplotlib statsmodels
 ```
 
 This is a post with executable code. Let's try some python.
@@ -20,15 +20,200 @@ This is a post with executable code. Let's try some python.
 import numpy as np
 import pylab as plt
 import pandas as pd
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from scipy import stats
+from typing import Tuple
+```
 
-x = np.linspace(0.0,3.0,100)
-y = np.sin(x)
-plt.plot(x, y)
+
+```{python}
+class Population:
+    
+    def __init__(
+        self, 
+        segment_sizes: np.ndarray,
+        conv_rate_control: np.ndarray,
+        conv_rate_treated: np.ndarray
+        ):
+        self.segment_sizes = segment_sizes
+        self.conv_rate_control = conv_rate_control
+        self.conv_rate_treated = conv_rate_treated
+
+    @property
+    def n_segments(self) -> int:
+        return len(self.segment_sizes)
+
+    @property
+    def conv_rate_effect(self) -> np.ndarray:
+        return self.conv_rate_treated - self.conv_rate_control
+
+    def sample(self, sample_size: int, rng: np.random.Generator) -> pd.DataFrame:
+        
+        segment_id_sample = rng.choice(
+            self.n_segments, 
+            p=self.segment_sizes, 
+            size=sample_size
+        )
+
+        sample_data = pd.DataFrame({
+            "segment_id": segment_id_sample,
+            "conv_rate_control": self.conv_rate_control[segment_id_sample],
+            "conv_rate_treated": self.conv_rate_treated[segment_id_sample],
+            "conv_rate_effect": self.conv_rate_effect[segment_id_sample],
+        })
+
+        return sample_data
+
+    @property
+    def ate(self) -> float:
+        return np.sum(self.segment_sizes * self.conv_rate_effect)
+
+    @classmethod
+    def generate(
+        cls,
+        segment_size_skew: float,
+        n_segments: int,
+        avg_segment_treated: float,
+        std_segment_treated: float,
+        avg_segment_control: float,
+        std_segment_control: float,
+        rng: np.random.Generator
+        ) ->  "Population":
+        pass
+```
+
+
+```{python}
+def random_treatment_assignment(sample: pd.DataFrame, rng = np.random.Generator) -> pd.DataFrame:
+    sample["treatment"] = rng.choice(2, size=len(sample.index.values))
+    return sample
+
+def run_experiment(sample: pd.DataFrame, rng = np.random.Generator) -> pd.DataFrame:
+    conv_rate = sample["conv_rate_control"] + sample["conv_rate_effect"] * sample["treatment"]
+    sample["converted"] = (rng.random(len(sample.index.values)) < conv_rate).astype(int)
+    return sample
+
+def simple_gtest_experiment_analysis(sample: pd.DataFrame) -> Tuple[float, float]:
+    contingency = sample.groupby("treatment").agg(
+        n_samples = ("converted", "count"),
+        n_conv = ("converted", "sum")
+    )
+    contingency["n_non_conv"] = contingency["n_samples"] - contingency["n_conv"]
+    p = stats.chi2_contingency(
+        contingency[["n_conv", "n_non_conv"]], 
+        lambda_="log-likelihood"
+    ).pvalue
+
+    contingency["conv"] = contingency["n_conv"] / contingency["n_samples"]
+    effect = contingency.loc[1, "conv"] - contingency.loc[0, "conv"]
+    return effect, p
+```
+
+
+```{python}
+def exact_split(x: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    n = len(x)
+    n1 = n // 2
+    n0 = n - n1
+
+    treatment = np.concatenate([np.ones(n1), np.zeros(n0)])
+    rng.shuffle(treatment)
+    return treatment
+
+def stratified_treatment_assignment(sample: pd.DataFrame, rng = np.random.Generator) -> pd.DataFrame:
+
+    sample["treatment"] = sample.groupby("segment_id")["conv_rate_control"].transform(exact_split, rng)
+    return sample
+```
+
+```{python}
+def covariate_adjusted_ols_analysis(sample: pd.DataFrame) -> Tuple[float, float]:
+    model = smf.ols(formula='converted ~ treatment + C(segment_id)', data=sample)
+    results = model.fit()
+    effect = results.params["treatment"]
+    p = results.pvalues["treatment"]
+    return effect, p
+```
+
+```{python}
+N_ITER = 1000
+SAMPLE_SIZE = 1000
+EFFECT_STEPS = 10
+ALPHA = 0.05
+TARGET_POWER = 0.8
+
+rng = np.random.default_rng(0)
+
+ate = np.empty(EFFECT_STEPS)
+pvalues_simple = np.empty((EFFECT_STEPS, N_ITER))
+pvalues_stratified = np.empty((EFFECT_STEPS, N_ITER))
+pvalues_covariate_ols = np.empty((EFFECT_STEPS, N_ITER))
+pvalues_covariate_glm = np.empty((EFFECT_STEPS, N_ITER))
+
+for i, effect_scale in enumerate(np.linspace(0.0, 1.0, EFFECT_STEPS)):
+    conv_rate_control = np.array([0.1, 0.2, 0.6])
+    conv_rate_effect = np.array([0.05, 0.2, 0.0])
+
+    pop = Population(
+        segment_sizes = np.array([0.4, 0.4, 0.2]),
+        conv_rate_control = conv_rate_control,
+        conv_rate_treated = conv_rate_effect * effect_scale + conv_rate_control, 
+    )
+    ate[i] = pop.ate
+    print(pop.ate)
+    for j in range(N_ITER):
+        samp = pop.sample(SAMPLE_SIZE, rng)
+        pvalues_simple[i,j] = (
+            samp
+            .pipe(random_treatment_assignment, rng)
+            .pipe(run_experiment, rng)
+            .pipe(simple_gtest_experiment_analysis)[1]
+        )
+        pvalues_stratified[i,j] = (
+            samp
+            .pipe(stratified_treatment_assignment, rng)
+            .pipe(run_experiment, rng)
+            .pipe(simple_gtest_experiment_analysis)[1]
+        )
+        pvalues_covariate_ols[i,j] = (
+            samp
+            .pipe(random_treatment_assignment, rng)
+            .pipe(run_experiment, rng)
+            .pipe(covariate_adjusted_ols_analysis)[1]
+        )
+
+power_simple = np.mean(pvalues_simple < ALPHA, axis=1)
+power_stratified = np.mean(pvalues_stratified < ALPHA, axis=1)
+power_covariate_ols = np.mean(pvalues_covariate_ols < ALPHA, axis=1)
+power_covariate_glm = np.mean(pvalues_covariate_glm < ALPHA, axis=1)
+
+print("Complete")
+```
+
+```{python}
+plt.plot(ate, power_simple, ".-", label="Chi2 test")
+plt.plot(ate, power_stratified, ".-", label="Stratified randomisation")
+plt.plot(ate, power_covariate_ols, ".-", label="Covariate adjusted OLS")
+plt.axhline(TARGET_POWER, color="r", lw=1, ls="--", label="Target power")
+plt.axhline(ALPHA, color="k", lw=1, ls="--", label="False positive rate")
+plt.xlabel("Average Treatment Effect (ATE)")
+plt.ylabel("Power")
+plt.ylim([0.0, 1.0])
+plt.legend()
+plt.show()
 ```
 
 # Next Section
 
-Hello
+TODO:
+- Remove GLM
+- Make plots with altair
+- Do continuous version, where instead of categories we have pre-experiment measurements
+- Make this version have an extreme group as an outlier
+- For this version, sort by pre-experiment feature and alternate assignment.
 
 ## Subheading
+
+
 
