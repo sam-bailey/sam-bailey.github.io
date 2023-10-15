@@ -1,0 +1,11 @@
+{
+  "hash": "258c47485cf23bb6b125f53e497db18f",
+  "result": {
+    "markdown": "---\ntitle: What is the point in stratified sampling?\ndate: '2023-06-25'\ncategories:\n  - Python\nimage: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png\ndescription: A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing.\ndraft: true\n---\n\nHello\n\n\n\n",
+    "supporting": [
+      "index_files"
+    ],
+    "filters": [],
+    "includes": {}
+  }
+}
