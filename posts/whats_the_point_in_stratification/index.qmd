@@ -1,5 +1,5 @@
 ---
-title: "What is the point in stratified sampling?"
+title: "What's the best way to ratio metrics in A/B tests"
 date: "2023-06-25"
 categories: [Python]
 image: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png
@@ -7,10 +7,6 @@ jupyter: "python3"
 description: "A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing."
 draft: true
 ---
-
-```{python}
-!pip install numpy pandas matplotlib statsmodels
-```
 
 ## What's stratified sampling?
 
