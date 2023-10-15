@@ -10,7 +10,7 @@ ARG NODE_VERSION="lts/*"
 RUN if [ "${INSTALL_NODE}" = "true" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
 
 # Install some standard python requirements for my workflow
-RUN python3 -m pip install jupyter virtualenv ipykernel
+RUN python3 -m pip install jupyter virtualenv ipykernel jupyter_client==7.4.7
 
 # Install Julia and set up jupyter kernel
 RUN pip install jill

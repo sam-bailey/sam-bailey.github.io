@@ -4,16 +4,30 @@ date: "2023-06-25"
 categories: [Python]
 image: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png
 jupyter: "python3"
-description: "I try to work out if sample stratification actuall helps A/B testing."
+description: "A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing."
 draft: true
 ---
 
 ```{python}
-#| output: false
 !pip install numpy pandas matplotlib statsmodels
 ```
 
-This is a post with executable code. Let's try some python.
+## What's stratified sampling?
+
+Imagine you're a data scientist working for an online retailer. You're tasked with running an A/B test to see if a new product page design will increase sales. You could just randomly assign half of your users to see the new design and half to see the old design. But what if your user base is made up of different types of people? For example, what if some of your users are more likely to be impulse buyers, while others are more likely to be price conscious? If you just randomly assign users to the two groups, you might not get a clear picture of which design is actually better. Or so the aragument goes...
+
+Stratified sampling is often touted as the "solution" to this "problem" - rather than assigning users to control or treatment at random, you'd be better off assigning them in such a way that important covariates are balanced between the two groups, and therefore ensuring that any differences you observe really are coming from your treatment, and are not coming from random differences between the groups. 
+
+Often it's argued that if you have a large enough sample size, then random sampling is fine, but if you don't (say you only expect 1000s or 10,000s of users in your experiment) then often stratified sampling is considered a good thing to do. I'm not convinced, so lets do some simulations to see if stratified sampling actually adds any value.
+
+::: {.callout-warning collapse="true"}
+## "What about other use-cases of stratified sampling?"
+
+In this post I'm really focusing on the use of stratified sampling as I've defined it above. There are of course a multitude of other situations where stratified sampling is used effectively. For example, when taking a sample of a large population for a survey, stratified sampling is often employed to ensure that the survey sample matches as closely as possible the population distribution. This sounds like a very reasonable use-case to me, and I'm sure there are many others. This post focuses on the case where stratified sampling refers to the process of balancing control and treatment groups in an A/B test.
+
+:::
+
+### The simple case of a binary target and categorical covariates
 
 ```{python}
 
@@ -192,6 +206,7 @@ print("Complete")
 ```
 
 ```{python}
+#| output: true
 plt.plot(ate, power_simple, ".-", label="Chi2 test")
 plt.plot(ate, power_stratified, ".-", label="Stratified randomisation")
 plt.plot(ate, power_covariate_ols, ".-", label="Covariate adjusted OLS")
@@ -204,7 +219,15 @@ plt.legend()
 plt.show()
 ```
 
-# Next Section
+## What about continuous targets and covariates?
+
+Okay so it doesn't work there, but what about continuous metrics? They are often a bit harder to work with, so maybe there we will add more value?
+
+## What if the target is really skewed?
+
+Surely if we have a small number of power users, who have a huge impact in our metric, it will be important to balance them between the groups?
+
+## Todo
 
 TODO:
 - Remove GLM
