@@ -2,14 +2,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.450">
+<meta name="generator" content="quarto-1.4.549">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="dcterms.date" content="2023-06-25">
-<meta name="description" content="A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing.">
+<meta name="description" content="What’s the best way to handle relative effects in A/B testing?">
 
-<title>Sam Bailey | Data Science - What is the point in stratified sampling?</title>
+<title>Sam Bailey | Data Science - The statistics of relative effect sizes in A/B testing.</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -48,6 +48,7 @@ ul.task-list li input[type="checkbox"] {
     "search-more-match-text": "more match in this document",
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
     "search-detached-cancel-button-title": "Cancel",
     "search-submit-button-title": "Submit",
     "search-label": "Search"
@@ -60,12 +61,12 @@ ul.task-list li input[type="checkbox"] {
 
 
 <link rel="stylesheet" href="../../styles.css">
-<meta property="og:title" content="Sam Bailey | Data Science - What is the point in stratified sampling?">
-<meta property="og:description" content="A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing.">
+<meta property="og:title" content="Sam Bailey | Data Science - The statistics of relative effect sizes in A/B testing.">
+<meta property="og:description" content="What’s the best way to handle relative effects in A/B testing?">
 <meta property="og:image" content="https://sambailey.me/_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png">
-<meta property="og:site-name" content="Sam Bailey | Data Science">
-<meta name="twitter:title" content="Sam Bailey | Data Science - What is the point in stratified sampling?">
-<meta name="twitter:description" content="A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing.">
+<meta property="og:site_name" content="Sam Bailey | Data Science">
+<meta name="twitter:title" content="Sam Bailey | Data Science - The statistics of relative effect sizes in A/B testing.">
+<meta name="twitter:description" content="What’s the best way to handle relative effects in A/B testing?">
 <meta name="twitter:image" content="https://sambailey.me/_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png">
 <meta name="twitter:card" content="summary_large_image">
 </head>
@@ -74,9 +75,9 @@ ul.task-list li input[type="checkbox"] {
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg navbar-dark ">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container">
+      <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">Sam Bailey | Data Science</span>
     </a>
@@ -87,41 +88,60 @@ ul.task-list li input[type="checkbox"] {
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link" href="../../index.html" rel="" target="">
- <span class="menu-text">Posts</span></a>
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Posts</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../../publications.html" rel="" target="">
- <span class="menu-text">Publications</span></a>
+    <a class="nav-link" href="../../publications.html"> 
+<span class="menu-text">Publications</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../../about.html" rel="" target="">
- <span class="menu-text">About</span></a>
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/sam-bailey/sam-bailey.github.io" rel="" target=""><i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/sam-bailey/sam-bailey.github.io"> <i class="bi bi-github" role="img">
 </i> 
- <span class="menu-text"></span></a>
+<span class="menu-text"></span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://www.linkedin.com/in/sam-bailey-data-scientist" rel="" target=""><i class="bi bi-linkedin" role="img">
+    <a class="nav-link" href="https://www.linkedin.com/in/sam-bailey-data-scientist"> <i class="bi bi-linkedin" role="img">
 </i> 
- <span class="menu-text"></span></a>
+<span class="menu-text"></span></a>
   </li>  
 </ul>
-            <div class="quarto-navbar-tools">
-</div>
           </div> <!-- /navcollapse -->
+          <div class="quarto-navbar-tools">
+</div>
       </div> <!-- /container-fluid -->
     </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
-    
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#the-likelihood-ratio" id="toc-the-likelihood-ratio" class="nav-link" data-scroll-target="#the-likelihood-ratio">The likelihood ratio</a></li>
+  <li><a href="#the-likelihood-ratio-for-the-means-of-two-independent-samples-of-data" id="toc-the-likelihood-ratio-for-the-means-of-two-independent-samples-of-data" class="nav-link" data-scroll-target="#the-likelihood-ratio-for-the-means-of-two-independent-samples-of-data">The likelihood ratio for the means of two independent samples of data</a></li>
+  <li><a href="#deriving-welchs-t-test-from-the-likelihood-ratio" id="toc-deriving-welchs-t-test-from-the-likelihood-ratio" class="nav-link" data-scroll-target="#deriving-welchs-t-test-from-the-likelihood-ratio">Deriving Welch’s t-test from the likelihood ratio</a></li>
+  <li><a href="#deriving-a-statistical-test-for-the-ratio-of-means" id="toc-deriving-a-statistical-test-for-the-ratio-of-means" class="nav-link" data-scroll-target="#deriving-a-statistical-test-for-the-ratio-of-means">Deriving a statistical test for the ratio of means</a>
+  <ul class="collapse">
+  <li><a href="#comparison-with-welchs-t-test" id="toc-comparison-with-welchs-t-test" class="nav-link" data-scroll-target="#comparison-with-welchs-t-test">Comparison with Welch’s t-test</a></li>
+  </ul></li>
+  <li><a href="#confidence-intervals" id="toc-confidence-intervals" class="nav-link" data-scroll-target="#confidence-intervals">Confidence intervals</a>
+  <ul class="collapse">
+  <li><a href="#confidence-interval-for-the-absolute-difference" id="toc-confidence-interval-for-the-absolute-difference" class="nav-link" data-scroll-target="#confidence-interval-for-the-absolute-difference">Confidence interval for the absolute difference</a></li>
+  <li><a href="#confidence-interval-for-the-relative-difference" id="toc-confidence-interval-for-the-relative-difference" class="nav-link" data-scroll-target="#confidence-interval-for-the-relative-difference">Confidence interval for the relative difference</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  </ul>
 </nav>
-<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
     </div>
@@ -130,7 +150,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<div class="quarto-title-block"><div><h1 class="title">What is the point in stratified sampling?</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source" data-quarto-source-url="https://github.com/sam-bailey/sam-bailey.github.io/blob/master/posts/ratio_metrics_in_ab_tests/index.qmd"><i class="bi"></i> Code</button></div></div>
+<div class="quarto-title-block"><div><h1 class="title">The statistics of relative effect sizes in A/B testing.</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source" data-quarto-source-url="https://github.com/sam-bailey/sam-bailey.github.io/blob/master/posts/ratio_metrics_in_ab_tests/index.qmd"><i class="bi"></i> Code</button></div></div>
   <div class="quarto-categories">
     <div class="quarto-category">Python</div>
   </div>
@@ -138,7 +158,7 @@ ul.task-list li input[type="checkbox"] {
 
 <div>
   <div class="description">
-    A simulation comparison of stratified sampling with other variance reduction techniques for A/B testing.
+    What’s the best way to handle relative effects in A/B testing?
   </div>
 </div>
 
@@ -157,11 +177,176 @@ ul.task-list li input[type="checkbox"] {
   </div>
   
 
+
 </header>
 
-<p>Hello</p>
+
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>Ratio metrics are critical when analyzing online controlled trials.</p>
+</section>
+<section id="the-likelihood-ratio" class="level1">
+<h1>The likelihood ratio</h1>
+<p>The test statistic for the likelihood ratio test is:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%3D-2%5Cleft%5Bl%5Cleft%28%5Ctheta_0%5Cright%29-l%28%5Chat%7B%5Ctheta%7D%29%5Cright%5D" alt="\lambda_{\mathrm{LR}}=-2\left[l\left(\theta_0\right)-l(\hat{\theta})\right]" title="\lambda_{\mathrm{LR}}=-2\left[l\left(\theta_0\right)-l(\hat{\theta})\right]" class="math display"></p>
+<p>Where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20l%5Cleft%28%5Ctheta%5Cright%29" alt="l\left(\theta\right)" title="l\left(\theta\right)" class="math inline"> is the log-likelihood of the observed data, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta" alt="\theta" title="\theta" class="math inline"> are the parameters of the model, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta_0" alt="\theta_0" title="\theta_0" class="math inline"> is the parameters under the null hypothesis, and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Ctheta%7D" alt="\hat{\theta}" title="\hat{\theta}" class="math inline"> are the maximum likelihood estimates of the parameters. The model for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta_0" alt="\theta_0" title="\theta_0" class="math inline"> must be a subset of the model for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Ctheta%7D" alt="\hat{\theta}" title="\hat{\theta}" class="math inline">, it’s normally the same model but with 1 or more of the parameters fixed at a specific value.</p>
+<p>The sampling distribution for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D" alt="\lambda_{\mathrm{LR}}" title="\lambda_{\mathrm{LR}}" class="math inline"> is often not know exactly, but if the sample size is large enough it should be approximately <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cchi%5E2" alt="\chi^2" title="\chi^2" class="math inline"> distributed, with the degrees of freedom equal to the difference in the number of free parameters in the two models.</p>
+<p>Let’s see if we can use this to first derive the two sample welches t-test, which tests the absolute difference between the means of two samples. Then if we can do that, we can apply the same approach to create a test for the relative difference.</p>
+</section>
+<section id="the-likelihood-ratio-for-the-means-of-two-independent-samples-of-data" class="level1">
+<h1>The likelihood ratio for the means of two independent samples of data</h1>
+<p>Assume we have two samples of data, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7Bx%7D" alt="\mathbf{x}" title="\mathbf{x}" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7By%7D" alt="\mathbf{y}" title="\mathbf{y}" class="math inline">, with <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20n_x" alt="n_x" title="n_x" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20n_y" alt="n_y" title="n_y" class="math inline"> samples respectively. I will model the two samples of data with two independent normal distributions. Therefore, I can write the joint likelihood of the two samples of data as:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20L%28%5Cmathbf%7Bx%7D%2C%20%5Cmathbf%7By%7D%20%7C%20%5Ctheta%29%20%3D%20%5Cprod_%7Bi%3D1%7D%5E%7Bn_x%7D%20N%28x_i%20%7C%20%5Cmu_x%2C%20%5Csigma_x%29%20%5Cprod_%7Bj%3D1%7D%5E%7Bn_y%7D%20N%28y_j%20%7C%20%5Cmu_y%2C%20%5Csigma_y%29" alt="L(\mathbf{x}, \mathbf{y} | \theta) = \prod_{i=1}^{n_x} N(x_i | \mu_x, \sigma_x) \prod_{j=1}^{n_y} N(y_j | \mu_y, \sigma_y)" title="L(\mathbf{x}, \mathbf{y} | \theta) = \prod_{i=1}^{n_x} N(x_i | \mu_x, \sigma_x) \prod_{j=1}^{n_y} N(y_j | \mu_y, \sigma_y)" class="math display"></p>
+<p>Where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Ctheta%20%3D%20%5B%5Cmu_x%2C%20%5Cmu_y%2C%20%5Csigma_x%2C%20%5Csigma_y%5D" alt="\theta = [\mu_x, \mu_y, \sigma_x, \sigma_y]" title="\theta = [\mu_x, \mu_y, \sigma_x, \sigma_y]" class="math inline">. And the log-likelihood as:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20l%28%5Cmathbf%7Bx%7D%2C%20%5Cmathbf%7By%7D%20%7C%20%5Ctheta%29%20%3D%20l%28%5Ctheta%29%20%3D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%5Cln%20%5Cleft%28%20N%28x_i%20%7C%20%5Cmu_x%2C%20%5Csigma_x%29%20%5Cright%29%20%2B%20%5Csum_%7Bj%3D1%7D%5E%7Bn_y%7D%20%5Cln%20%5Cleft%28%20N%28y_j%20%7C%20%5Cmu_y%2C%20%5Csigma_y%29%20%5Cright%29" alt="l(\mathbf{x}, \mathbf{y} | \theta) = l(\theta) = \sum_{i=1}^{n_x} \ln \left( N(x_i | \mu_x, \sigma_x) \right) + \sum_{j=1}^{n_y} \ln \left( N(y_j | \mu_y, \sigma_y) \right)" title="l(\mathbf{x}, \mathbf{y} | \theta) = l(\theta) = \sum_{i=1}^{n_x} \ln \left( N(x_i | \mu_x, \sigma_x) \right) + \sum_{j=1}^{n_y} \ln \left( N(y_j | \mu_y, \sigma_y) \right)" class="math display"></p>
+<p>The log-likelihood of the normal distribution is:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cln%20%5Cleft%28%20N%28x%20%7C%20%5Cmu%2C%20%5Csigma%29%20%5Cright%29%20%3D%20-%20%5Cfrac%7B1%7D%7B2%7D%20%5Cln%7B2%20%5Cpi%7D%20-%20%5Cln%7B%5Csigma%7D%20-%20%5Cfrac%7B1%7D%7B2%20%5Csigma%5E2%7D%5Cleft%28%20x%20-%20%5Cmu%20%5Cright%29%5E2" alt="\ln \left( N(x | \mu, \sigma) \right) = - \frac{1}{2} \ln{2 \pi} - \ln{\sigma} - \frac{1}{2 \sigma^2}\left( x - \mu \right)^2" title="\ln \left( N(x | \mu, \sigma) \right) = - \frac{1}{2} \ln{2 \pi} - \ln{\sigma} - \frac{1}{2 \sigma^2}\left( x - \mu \right)^2" class="math display"></p>
+<p>Therefore, we can write the log-likelihood of our data as:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20l%28%5Ctheta%29%20%3D%20-%20%5Cleft%28%20%5Cfrac%7Bn_x%20%2B%20n_y%7D%7B2%7D%20%5Cln%7B2%20%5Cpi%7D%20%2B%20n_x%20%5Cln%7B%5Csigma_x%7D%20%2B%20n_y%20%5Cln%7B%5Csigma_y%7D%20%2B%20%5Cfrac%7B1%7D%7B2%20%5Csigma_x%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cmu_x%20%5Cright%29%5E2%20%2B%20%5Cfrac%7B1%7D%7B2%20%5Csigma_y%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_y%7D%20%20%5Cleft%28%20y%20-%20%5Cmu_y%20%5Cright%29%5E2%20%5Cright%29" alt="l(\theta) = - \left( \frac{n_x + n_y}{2} \ln{2 \pi} + n_x \ln{\sigma_x} + n_y \ln{\sigma_y} + \frac{1}{2 \sigma_x^2} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 + \frac{1}{2 \sigma_y^2} \sum_{i=1}^{n_y}  \left( y - \mu_y \right)^2 \right)" title="l(\theta) = - \left( \frac{n_x + n_y}{2} \ln{2 \pi} + n_x \ln{\sigma_x} + n_y \ln{\sigma_y} + \frac{1}{2 \sigma_x^2} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 + \frac{1}{2 \sigma_y^2} \sum_{i=1}^{n_y}  \left( y - \mu_y \right)^2 \right)" class="math display"></p>
+<p>Now we don’t care about the the standard deviations, our null hypotheses are always about the means. So let’s maximise the log-likelihood with respect to <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Csigma_x" alt="\sigma_x" title="\sigma_x" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Csigma_y" alt="\sigma_y" title="\sigma_y" class="math inline">.</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%200%20%3D%20%5Cfrac%7B%5Cpartial%20l%7D%7B%5Cpartial%20%5Csigma_x%7D%20%3D%20-%20%5Cfrac%7Bn_x%7D%7B%5Csigma_x%7D%20%2B%20%5Cfrac%7B1%7D%7B%5Csigma_x%5E3%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cmu_x%20%5Cright%29%5E2" alt="0 = \frac{\partial l}{\partial \sigma_x} = - \frac{n_x}{\sigma_x} + \frac{1}{\sigma_x^3} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2" title="0 = \frac{\partial l}{\partial \sigma_x} = - \frac{n_x}{\sigma_x} + \frac{1}{\sigma_x^3} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2" class="math display"></p>
+<p>Solving this gives (and the same for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Csigma_y" alt="\sigma_y" title="\sigma_y" class="math inline">):</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Csigma_x%5E2%20%3D%20%5Cfrac%7B1%7D%7Bn_x%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cmu_x%20%5Cright%29%5E2" alt="\sigma_x^2 = \frac{1}{n_x} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2" title="\sigma_x^2 = \frac{1}{n_x} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2" class="math display"></p>
+<p>Substituting this back into the likelihood function gives:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20l%28%5Ctheta%29%20%3D%20-%20%5Cleft%28%20%5Cfrac%7Bn_x%20%2B%20n_y%7D%7B2%7D%20%20%28%5Cln%7B2%20%5Cpi%7D%20%2B%201%29%20%2B%20%5Cfrac%7Bn_x%7D%7B2%7D%20%5Cln%20%5Cleft%28%20%5Cfrac%7B1%7D%7Bn_x%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cmu_x%20%5Cright%29%5E2%20%5Cright%29%20%2B%20%5Cfrac%7Bn_y%7D%7B2%7D%20%5Cln%20%5Cleft%28%20%5Cfrac%7B1%7D%7Bn_y%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_y%7D%20%20%5Cleft%28%20y%20-%20%5Cmu_y%20%5Cright%29%5E2%20%5Cright%29%20%5Cright%29" alt="l(\theta) = - \left( \frac{n_x + n_y}{2}  (\ln{2 \pi} + 1) + \frac{n_x}{2} \ln \left( \frac{1}{n_x} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 \right) + \frac{n_y}{2} \ln \left( \frac{1}{n_y} \sum_{i=1}^{n_y}  \left( y - \mu_y \right)^2 \right) \right)" title="l(\theta) = - \left( \frac{n_x + n_y}{2}  (\ln{2 \pi} + 1) + \frac{n_x}{2} \ln \left( \frac{1}{n_x} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 \right) + \frac{n_y}{2} \ln \left( \frac{1}{n_y} \sum_{i=1}^{n_y}  \left( y - \mu_y \right)^2 \right) \right)" class="math display"></p>
+<p>Now to estimate <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20l%28%5Chat%7B%5Ctheta%7D%29" alt="l(\hat{\theta})" title="l(\hat{\theta})" class="math inline"> I need to maximize with respect to <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_x" alt="\mu_x" title="\mu_x" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_y" alt="\mu_y" title="\mu_y" class="math inline"> too. While I could do this again formally by differentiating <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20l%28%5Ctheta%29" alt="l(\theta)" title="l(\theta)" class="math inline">, it’s not really necessary. It’s clear that the maximum is when <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_x%20%3D%20%5Cbar%7Bx%7D" alt="\mu_x = \bar{x}" title="\mu_x = \bar{x}" class="math inline">, where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cbar%7Bx%7D" alt="\bar{x}" title="\bar{x}" class="math inline"> is the mean of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7Bx%7D" alt="\mathbf{x}" title="\mathbf{x}" class="math inline">, and the same for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20y" alt="y" title="y" class="math inline">. This gives:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20l%28%5Chat%7B%5Ctheta%7D%29%20%3D%20-%20%5Cleft%28%20%5Cfrac%7Bn_x%20%2B%20n_y%7D%7B2%7D%20%20%28%5Cln%7B2%20%5Cpi%7D%20%2B%201%29%20%2B%20%5Cfrac%7Bn_x%7D%7B2%7D%20%5Cln%20%5Chat%7B%5Csigma%7D_x%5E2%20%2B%20%5Cfrac%7Bn_y%7D%7B2%7D%20%5Cln%20%5Chat%7B%5Csigma%7D_y%5E2%20%5Cright%29" alt="l(\hat{\theta}) = - \left( \frac{n_x + n_y}{2}  (\ln{2 \pi} + 1) + \frac{n_x}{2} \ln \hat{\sigma}_x^2 + \frac{n_y}{2} \ln \hat{\sigma}_y^2 \right)" title="l(\hat{\theta}) = - \left( \frac{n_x + n_y}{2}  (\ln{2 \pi} + 1) + \frac{n_x}{2} \ln \hat{\sigma}_x^2 + \frac{n_y}{2} \ln \hat{\sigma}_y^2 \right)" class="math display"></p>
+<p>Where <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Csigma%7D_x" alt="\hat{\sigma}_x" title="\hat{\sigma}_x" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Chat%7B%5Csigma%7D_y" alt="\hat{\sigma}_y" title="\hat{\sigma}_y" class="math inline"> are the uncorrected sample standard deviations of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7Bx%7D" alt="\mathbf{x}" title="\mathbf{x}" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7By%7D" alt="\mathbf{y}" title="\mathbf{y}" class="math inline">. Now using these two expressions, I can calculate <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D" alt="\lambda_{\mathrm{LR}}" title="\lambda_{\mathrm{LR}}" class="math inline"> for the general case under the null hypothesis that the population mean of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7Bx%7D%20%3D%20%5Cmu_x" alt="\mathbf{x} = \mu_x" title="\mathbf{x} = \mu_x" class="math inline"> and the population mean of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmathbf%7By%7D%20%3D%20%5Cmu_y" alt="\mathbf{y} = \mu_y" title="\mathbf{y} = \mu_y" class="math inline">:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cmu_x%2C%20%5Cmu_y%29%20%3D%20n_x%20%5Cln%20%5Cleft%28%20%5Cfrac%7B1%7D%7Bn_x%20%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cmu_x%20%5Cright%29%5E2%20%5Cright%29%20%2B%20n_y%20%5Cln%20%5Cleft%28%20%5Cfrac%7B1%7D%7Bn_y%20%5Chat%7B%5Csigma%7D_y%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_y%7D%20%20%5Cleft%28%20y%20-%20%5Cmu_y%20%5Cright%29%5E2%20%5Cright%29" alt="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) = n_x \ln \left( \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 \right) + n_y \ln \left( \frac{1}{n_y \hat{\sigma}_y^2} \sum_{i=1}^{n_y}  \left( y - \mu_y \right)^2 \right)" title="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) = n_x \ln \left( \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 \right) + n_y \ln \left( \frac{1}{n_y \hat{\sigma}_y^2} \sum_{i=1}^{n_y}  \left( y - \mu_y \right)^2 \right)" class="math display"></p>
+<p>Now I can use a trick to simplify this further, by noting that:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0A%5Cfrac%7B1%7D%7Bn_x%20%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cmu_x%20%5Cright%29%5E2%20%26%3D%20%5Cfrac%7B1%7D%7Bn_x%20%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20x%20-%20%5Cbar%7Bx%7D%20%2B%20%5Cbar%7Bx%7D%20-%20%5Cmu_x%20%5Cright%29%5E2%20%5Cnonumber%20%5C%5C%0A%26%3D%20%5Cfrac%7B1%7D%7Bn_x%20%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20%5Cleft%28%20x%20-%20%5Cbar%7Bx%7D%20%5Cright%29%5E2%20%2B%20%5Cleft%28%20%5Cbar%7Bx%7D%20-%20%5Cmu_x%20%5Cright%29%5E2%20%2B%202%20%28x%20-%20%5Cbar%7Bx%7D%29%28%5Cbar%7Bx%7D%20-%20%5Cmu_x%29%20%5Cright%29%20%5Cnonumber%20%5C%5C%0A%26%3D%20%5Cfrac%7B1%7D%7Bn_x%20%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Csum_%7Bi%3D1%7D%5E%7Bn_x%7D%20%20%5Cleft%28%20%5Cleft%28%20x%20-%20%5Cbar%7Bx%7D%20%5Cright%29%5E2%20%2B%20%5Cleft%28%20%5Cbar%7Bx%7D%20-%20%5Cmu_x%20%5Cright%29%5E2%20%5Cright%29%20%5Cnonumber%20%5C%5C%0A%26%3D%201%20%2B%20%5Cfrac%7B%5Cleft%28%20%5Cbar%7Bx%7D%20-%20%5Cmu_x%20%5Cright%29%5E2%7D%7B%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+\frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 &amp;= \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( x - \bar{x} + \bar{x} - \mu_x \right)^2 \nonumber \\
+&amp;= \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( \left( x - \bar{x} \right)^2 + \left( \bar{x} - \mu_x \right)^2 + 2 (x - \bar{x})(\bar{x} - \mu_x) \right) \nonumber \\
+&amp;= \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( \left( x - \bar{x} \right)^2 + \left( \bar{x} - \mu_x \right)^2 \right) \nonumber \\
+&amp;= 1 + \frac{\left( \bar{x} - \mu_x \right)^2}{\hat{\sigma}_x^2} \nonumber
+\end{align}" title="\begin{align}
+\frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( x - \mu_x \right)^2 &amp;= \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( x - \bar{x} + \bar{x} - \mu_x \right)^2 \nonumber \\
+&amp;= \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( \left( x - \bar{x} \right)^2 + \left( \bar{x} - \mu_x \right)^2 + 2 (x - \bar{x})(\bar{x} - \mu_x) \right) \nonumber \\
+&amp;= \frac{1}{n_x \hat{\sigma}_x^2} \sum_{i=1}^{n_x}  \left( \left( x - \bar{x} \right)^2 + \left( \bar{x} - \mu_x \right)^2 \right) \nonumber \\
+&amp;= 1 + \frac{\left( \bar{x} - \mu_x \right)^2}{\hat{\sigma}_x^2} \nonumber
+\end{align}" class="math display"></p>
+<p>Finally substituting that back into the original equation gives:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cmu_x%2C%20%5Cmu_y%29%20%3Dn_x%20%5Cln%20%5Cleft%28%201%20%2B%20%5Cfrac%7B%28%5Cbar%7Bx%7D%20-%20%5Cmu_x%29%5E2%7D%7B%5Chat%7B%5Csigma%7D_x%5E2%7D%20%5Cright%29%20%2B%20n_y%20%5Cln%20%5Cleft%28%201%20%2B%20%5Cfrac%7B%28%5Cbar%7By%7D%20-%20%5Cmu_y%29%5E2%7D%7B%5Chat%7B%5Csigma%7D_y%5E2%7D%20%5Cright%29" alt="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) =n_x \ln \left( 1 + \frac{(\bar{x} - \mu_x)^2}{\hat{\sigma}_x^2} \right) + n_y \ln \left( 1 + \frac{(\bar{y} - \mu_y)^2}{\hat{\sigma}_y^2} \right)" title="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) =n_x \ln \left( 1 + \frac{(\bar{x} - \mu_x)^2}{\hat{\sigma}_x^2} \right) + n_y \ln \left( 1 + \frac{(\bar{y} - \mu_y)^2}{\hat{\sigma}_y^2} \right)" class="math display"></p>
+<p>This can be approximated using the taylor expansion:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cln%281%2Bx%5E2%29%20%5Capprox%20x%5E2%20%2B%20O%28x%5E4%29" alt="\ln(1+x^2) \approx x^2 + O(x^4)" title="\ln(1+x^2) \approx x^2 + O(x^4)" class="math display"></p>
+<p>Using this gives:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cmu_x%2C%20%5Cmu_y%29%20%3D%5Cfrac%7B%28%5Cbar%7Bx%7D%20-%20%5Cmu_x%29%5E2%7D%7B%5Chat%7B%5Csigma%7D_x%5E2%20%2F%20n_x%7D%20%2B%20%5Cfrac%7B%28%5Cbar%7By%7D%20-%20%5Cmu_y%29%5E2%7D%7B%5Chat%7B%5Csigma%7D_y%5E2%20%2F%20n_y%7D" alt="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) =\frac{(\bar{x} - \mu_x)^2}{\hat{\sigma}_x^2 / n_x} + \frac{(\bar{y} - \mu_y)^2}{\hat{\sigma}_y^2 / n_y}" title="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) =\frac{(\bar{x} - \mu_x)^2}{\hat{\sigma}_x^2 / n_x} + \frac{(\bar{y} - \mu_y)^2}{\hat{\sigma}_y^2 / n_y}" class="math display"></p>
+<p>This looks like the sum of two t-distributed random variables squared. I will simplify this further by defining the standard error as, giving:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cmu_x%2C%20%5Cmu_y%29%20%3D%20%5Cfrac%7B%28%5Cbar%7Bx%7D%20-%20%5Cmu_x%29%5E2%7D%7B%5Csigma%5E2_%7B%5Cmu%2C%20x%7D%7D" alt="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) = \frac{(\bar{x} - \mu_x)^2}{\sigma^2_{\mu, x}}" title="\lambda_{\mathrm{LR}}(\mu_x, \mu_y) = \frac{(\bar{x} - \mu_x)^2}{\sigma^2_{\mu, x}}" class="math display"></p>
+</section>
+<section id="deriving-welchs-t-test-from-the-likelihood-ratio" class="level1">
+<h1>Deriving Welch’s t-test from the likelihood ratio</h1>
+<p>The Welch’s t-test tests the null hypothesis that the absolute difference between two means is some fixed value:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0AH_0%20%26%3A%20%5Cquad%20%5Cmu_y%20-%20%5Cmu_x%20%3D%20%5CDelta%20%5Cnonumber%20%5C%5C%0AH_A%20%26%3A%20%5Cquad%20%5Cmu_y%20-%20%5Cmu_x%20%5Cneq%20%5CDelta%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+H_0 &amp;: \quad \mu_y - \mu_x = \Delta \nonumber \\
+H_A &amp;: \quad \mu_y - \mu_x \neq \Delta\nonumber
+\end{align}" title="\begin{align}
+H_0 &amp;: \quad \mu_y - \mu_x = \Delta \nonumber \\
+H_A &amp;: \quad \mu_y - \mu_x \neq \Delta\nonumber
+\end{align}" class="math display"></p>
+<p>To get the test statistic for this, I need to minimize <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D" alt="\lambda_{\mathrm{LR}}" title="\lambda_{\mathrm{LR}}" class="math inline"> under the constraint that <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_y%20-%20%5Cmu_x%20%3D%20%5CDelta" alt="\mu_y - \mu_x = \Delta" title="\mu_y - \mu_x = \Delta" class="math inline">. To do this I’ll substitute <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_y%20%3D%20%5Cmu_x%20%2B%20%5CDelta" alt="\mu_y = \mu_x + \Delta" title="\mu_y = \mu_x + \Delta" class="math inline"> into the equation for <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D" alt="\lambda_{\mathrm{LR}}" title="\lambda_{\mathrm{LR}}" class="math inline">.</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0A%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cmu_x%2C%20%5CDelta%29%20%26%3D%20%5Cfrac%7B%28%5Cbar%7Bx%7D%20-%20%5Cmu_x%29%5E2%7D%7B%5Csigma_%5Cbar%7Bx%7D%5E2%7D%2B%20%5Cfrac%7B%28%5Cbar%7By%7D%20-%20%5Cmu_x%20-%20%5CDelta%20%29%5E2%7D%7B%5Csigma_%5Cbar%7By%7D%5E2%7D%20%5Cnonumber%20%5C%5C%0A%26%3D%20%5Cfrac%7B%28%5Cmu_x%20-%20%5Cbar%7Bx%7D%29%5E2%7D%7B%5Csigma_%5Cbar%7Bx%7D%5E2%7D%2B%20%5Cfrac%7B%28%5Cmu_x%20-%20%28%5Cbar%7By%7D%20-%20%5CDelta%29%20%29%5E2%7D%7B%5Csigma_%5Cbar%7By%7D%5E2%7D%20%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+\lambda_{\mathrm{LR}}(\mu_x, \Delta) &amp;= \frac{(\bar{x} - \mu_x)^2}{\sigma_\bar{x}^2}+ \frac{(\bar{y} - \mu_x - \Delta )^2}{\sigma_\bar{y}^2} \nonumber \\
+&amp;= \frac{(\mu_x - \bar{x})^2}{\sigma_\bar{x}^2}+ \frac{(\mu_x - (\bar{y} - \Delta) )^2}{\sigma_\bar{y}^2} \nonumber
+\end{align}" title="\begin{align}
+\lambda_{\mathrm{LR}}(\mu_x, \Delta) &amp;= \frac{(\bar{x} - \mu_x)^2}{\sigma_\bar{x}^2}+ \frac{(\bar{y} - \mu_x - \Delta )^2}{\sigma_\bar{y}^2} \nonumber \\
+&amp;= \frac{(\mu_x - \bar{x})^2}{\sigma_\bar{x}^2}+ \frac{(\mu_x - (\bar{y} - \Delta) )^2}{\sigma_\bar{y}^2} \nonumber
+\end{align}" class="math display"></p>
+<p>Now it can be shown that in general:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cmin_x%20%5Cleft%5C%7B%20%5Cfrac%7B%28x%20-%20b%29%5E2%7D%7Ba%5E2%7D%20%2B%20%5Cfrac%7B%28x%20-%20d%29%5E2%7D%7Bc%5E2%7D%20%5Cright%5C%7D%20%3D%20%5Cfrac%7B%28b%20-%20d%29%5E2%7D%7Ba%5E2%20%2B%20c%5E2%7D" alt="\min_x \left\{ \frac{(x - b)^2}{a^2} + \frac{(x - d)^2}{c^2} \right\} = \frac{(b - d)^2}{a^2 + c^2}" title="\min_x \left\{ \frac{(x - b)^2}{a^2} + \frac{(x - d)^2}{c^2} \right\} = \frac{(b - d)^2}{a^2 + c^2}" class="math display"></p>
+<p>I can use this to find the minimum of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D" alt="\lambda_{\mathrm{LR}}" title="\lambda_{\mathrm{LR}}" class="math inline"> without doing lots of differentiation. It gives:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5CDelta%29%20%3D%20%5Cfrac%7B%5Cleft%28%20%5Cbar%7By%7D%20-%20%5Cbar%7Bx%7D%20-%20%5CDelta%20%5Cright%29%5E2%7D%7B%5Csigma_%5Cbar%7Bx%7D%5E2%20%2B%20%5Csigma_%5Cbar%7By%7D%5E2%7D" alt="\lambda_{\mathrm{LR}}(\Delta) = \frac{\left( \bar{y} - \bar{x} - \Delta \right)^2}{\sigma_\bar{x}^2 + \sigma_\bar{y}^2}" title="\lambda_{\mathrm{LR}}(\Delta) = \frac{\left( \bar{y} - \bar{x} - \Delta \right)^2}{\sigma_\bar{x}^2 + \sigma_\bar{y}^2}" class="math display"></p>
+<p>Finally, taking the square root of this, gives the Welch’s t-test statistic:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20t" alt="t" title="t" class="math display"></p>
+<p>So we have successfully derived the Welch’s t-test from the likelihood ratio!</p>
+</section>
+<section id="deriving-a-statistical-test-for-the-ratio-of-means" class="level1">
+<h1>Deriving a statistical test for the ratio of means</h1>
+<p>Now, given that this works for the regular difference between two means, let’s see what we get for a ratio! This is a different null hypothesis:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0AH_0%20%26%3A%20%5Cquad%20%5Cfrac%7B%5Cmu_y%7D%7B%5Cmu_x%7D%20%3D%20%5Cdelta%20%5Cnonumber%20%5C%5C%0AH_A%20%26%3A%20%5Cquad%20%20%5Cfrac%7B%5Cmu_y%7D%7B%5Cmu_x%7D%20%5Cneq%20%5Cdelta%20%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+H_0 &amp;: \quad \frac{\mu_y}{\mu_x} = \delta \nonumber \\
+H_A &amp;: \quad  \frac{\mu_y}{\mu_x} \neq \delta \nonumber
+\end{align}" title="\begin{align}
+H_0 &amp;: \quad \frac{\mu_y}{\mu_x} = \delta \nonumber \\
+H_A &amp;: \quad  \frac{\mu_y}{\mu_x} \neq \delta \nonumber
+\end{align}" class="math display"></p>
+<p>Taking the same approach as before, I substitute in that <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_y%20%3D%20%5Cdelta%20%5Cmu_x" alt="\mu_y = \delta \mu_x" title="\mu_y = \delta \mu_x" class="math inline">:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0A%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cmu_x%2C%20%5Cdelta%29%20%26%3D%20%5Cfrac%7B%28%5Cbar%7Bx%7D%20-%20%5Cmu_x%29%5E2%7D%7B%5Csigma_%5Cbar%7Bx%7D%5E2%7D%2B%20%5Cfrac%7B%28%5Cbar%7By%7D%20-%20%5Cmu_x%20%5Cdelta%20%29%5E2%7D%7B%5Csigma_%5Cbar%7By%7D%5E2%7D%20%5Cnonumber%20%5C%5C%0A%26%3D%20%5Cfrac%7B%28%5Cmu_x%20-%20%5Cbar%7Bx%7D%29%5E2%7D%7B%5Csigma_%5Cbar%7Bx%7D%5E2%7D%2B%20%5Cfrac%7B%28%5Cmu_x%20-%20%5Cfrac%7B%5Cbar%7By%7D%7D%7B%5Cdelta%7D%29%20%29%5E2%7D%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2F%20%5Cdelta%5E2%7D%20%5Cnonumber%20%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+\lambda_{\mathrm{LR}}(\mu_x, \delta) &amp;= \frac{(\bar{x} - \mu_x)^2}{\sigma_\bar{x}^2}+ \frac{(\bar{y} - \mu_x \delta )^2}{\sigma_\bar{y}^2} \nonumber \\
+&amp;= \frac{(\mu_x - \bar{x})^2}{\sigma_\bar{x}^2}+ \frac{(\mu_x - \frac{\bar{y}}{\delta}) )^2}{\sigma_\bar{y}^2 / \delta^2} \nonumber \nonumber
+\end{align}" title="\begin{align}
+\lambda_{\mathrm{LR}}(\mu_x, \delta) &amp;= \frac{(\bar{x} - \mu_x)^2}{\sigma_\bar{x}^2}+ \frac{(\bar{y} - \mu_x \delta )^2}{\sigma_\bar{y}^2} \nonumber \\
+&amp;= \frac{(\mu_x - \bar{x})^2}{\sigma_\bar{x}^2}+ \frac{(\mu_x - \frac{\bar{y}}{\delta}) )^2}{\sigma_\bar{y}^2 / \delta^2} \nonumber \nonumber
+\end{align}" class="math display"></p>
+<p>And using the same trick again I can find the minimum:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Clambda_%7B%5Cmathrm%7BLR%7D%7D%28%5Cdelta%29%20%3D%20%5Cfrac%7B%5Cleft%28%20%5Cbar%7By%7D%20-%20%5Cdelta%20%5Cbar%7Bx%7D%20%5Cright%29%5E2%7D%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%5Cdelta%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%20%7D" alt="\lambda_{\mathrm{LR}}(\delta) = \frac{\left( \bar{y} - \delta \bar{x} \right)^2}{\sigma_\bar{y}^2 + \delta^2 \sigma_\bar{x}^2 }" title="\lambda_{\mathrm{LR}}(\delta) = \frac{\left( \bar{y} - \delta \bar{x} \right)^2}{\sigma_\bar{y}^2 + \delta^2 \sigma_\bar{x}^2 }" class="math display"></p>
+<p>And again taking the square root gives a t-distributed metric:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20t_%5Cdelta%28%5Cdelta%29%20%3D%20%5Cfrac%7B%5Cbar%7By%7D%20-%20%5Cdelta%20%5Cbar%7Bx%7D%20%7D%7B%5Csqrt%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%5Cdelta%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%7D%7D" alt="t_\delta(\delta) = \frac{\bar{y} - \delta \bar{x} }{\sqrt{\sigma_\bar{y}^2 + \delta^2 \sigma_\bar{x}^2}}" title="t_\delta(\delta) = \frac{\bar{y} - \delta \bar{x} }{\sqrt{\sigma_\bar{y}^2 + \delta^2 \sigma_\bar{x}^2}}" class="math display"></p>
+<p>This metric can be used as a statistical test for the ratio <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cdelta" alt="\delta" title="\delta" class="math inline">!</p>
+<section id="comparison-with-welchs-t-test" class="level2">
+<h2 class="anchored" data-anchor-id="comparison-with-welchs-t-test">Comparison with Welch’s t-test</h2>
+<p>Now while this is t-distributed, it’s actually different to the original Welch’s t-statistic. I can check that by substituting the absolute difference in for the relative difference, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cdelta%20%3D%20%5Cfrac%7B%5CDelta%7D%7B%5Cbar%7Bx%7D%7D%20%2B%201" alt="\delta = \frac{\Delta}{\bar{x}} + 1" title="\delta = \frac{\Delta}{\bar{x}} + 1" class="math inline">. This gives:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20t_%5Cdelta%28%5CDelta%29%20%3D%20%5Cfrac%7B%20%5Cbar%7By%7D%20-%5Cbar%7Bx%7D%20-%20%5CDelta%20%7D%7B%5Csqrt%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%5Cleft%28%5Cfrac%7B%5CDelta%7D%7B%5Cbar%7Bx%7D%7D%20%2B%201%20%5Cright%29%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%20%7D%7D%20%5Cneq%20t_%5CDelta%28%5CDelta%29" alt="t_\delta(\Delta) = \frac{ \bar{y} -\bar{x} - \Delta }{\sqrt{\sigma_\bar{y}^2 + \left(\frac{\Delta}{\bar{x}} + 1 \right)^2 \sigma_\bar{x}^2 }} \neq t_\Delta(\Delta)" title="t_\delta(\Delta) = \frac{ \bar{y} -\bar{x} - \Delta }{\sqrt{\sigma_\bar{y}^2 + \left(\frac{\Delta}{\bar{x}} + 1 \right)^2 \sigma_\bar{x}^2 }} \neq t_\Delta(\Delta)" class="math display"></p>
+<p>Interestingly the numerator is the same as in <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20t_%5CDelta" alt="t_\Delta" title="t_\Delta" class="math inline">, but the denominator is different! The variance depends on <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5CDelta" alt="\Delta" title="\Delta" class="math inline">. So we’ve found something new, it’s not just rearranging Welch’s t-test.</p>
+<p>Now while these are not equal in general, they are equal in the very important case - the case where you are testing the null hypothesis that <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cmu_x%20%3D%20%5Cmu_y" alt="\mu_x = \mu_y" title="\mu_x = \mu_y" class="math inline">, giving <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5CDelta%20%3D%200" alt="\Delta = 0" title="\Delta = 0" class="math inline"> and <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cdelta%20%3D%201" alt="\delta = 1" title="\delta = 1" class="math inline">. In this case, the above formula reduces to:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20t_%5Cdelta%280%29%20%3D%20%5Cfrac%7B%20%5Cbar%7By%7D%20-%5Cbar%7Bx%7D%7D%7B%5Csqrt%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%20%5Csigma_%5Cbar%7Bx%7D%5E2%20%7D%7D%20%3D%20t_%5CDelta%280%29" alt="t_\delta(0) = \frac{ \bar{y} -\bar{x}}{\sqrt{\sigma_\bar{y}^2 +  \sigma_\bar{x}^2 }} = t_\Delta(0)" title="t_\delta(0) = \frac{ \bar{y} -\bar{x}}{\sqrt{\sigma_\bar{y}^2 +  \sigma_\bar{x}^2 }} = t_\Delta(0)" class="math display"></p>
+<p>This is a very useful finding. If this were not the case, you could have different results for whether you can reject the null hypothesis that two samples have the same population mean, just depending on whether you care about reporting on the relative or absolute difference. It’s of course sensible that the statistical tests should be different in general, but in this special case it’s sensible that they coincide.</p>
+</section>
+</section>
+<section id="confidence-intervals" class="level1">
+<h1>Confidence intervals</h1>
+<p>We have a statistical test now, but what about confidence intervals? Cox and Hinkly have a very nice definition of the confidence interval in their book, Theoretical Statistics. They say that the confidence interval contains all the values that are statistically consistent with the data.</p>
+<p>So we can construct confidence intervals in the same way. They are all the values that the null hypothesis that the population has that value would not be rejected by our new statistical tests.</p>
+<p>For a specific false positive rate, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha" alt="\alpha" title="\alpha" class="math inline">, we reject the values that are more extreme than the critical t-values, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cpm%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D" alt="\pm t_{1 - \frac{\alpha}{2}}" title="\pm t_{1 - \frac{\alpha}{2}}" class="math inline">. Therefore, we have that:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0A%5Cmp%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%20%26%3D%20t_%5CDelta%28%5CDelta_%7B%5Cpm%7D%29%20%5Cnonumber%20%5C%5C%0A%5Cmp%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%20%26%3D%20t_%5Cdelta%28%5Cdelta_%7B%5Cpm%7D%29%20%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+\mp t_{1 - \frac{\alpha}{2}} &amp;= t_\Delta(\Delta_{\pm}) \nonumber \\
+\mp t_{1 - \frac{\alpha}{2}} &amp;= t_\delta(\delta_{\pm}) \nonumber
+\end{align}" title="\begin{align}
+\mp t_{1 - \frac{\alpha}{2}} &amp;= t_\Delta(\Delta_{\pm}) \nonumber \\
+\mp t_{1 - \frac{\alpha}{2}} &amp;= t_\delta(\delta_{\pm}) \nonumber
+\end{align}" class="math display"></p>
+<p>Note that, above, the signs are opposite. This is because the highest value of <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5CDelta" alt="\Delta" title="\Delta" class="math inline"> or <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Cdelta" alt="\delta" title="\delta" class="math inline"> causes the statistic to be lower.</p>
+<section id="confidence-interval-for-the-absolute-difference" class="level2">
+<h2 class="anchored" data-anchor-id="confidence-interval-for-the-absolute-difference">Confidence interval for the absolute difference</h2>
+<p>First the confidence interval for the absolute difference, <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5CDelta_%5Cpm" alt="\Delta_\pm" title="\Delta_\pm" class="math inline">.</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cmp%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%20%3D%20%5Cfrac%7B%5Cbar%7By%7D%20-%20%5Cbar%7Bx%7D%20-%20%5CDelta_%7B%5Cpm%7D%7D%7B%5Csqrt%7B%5Csigma_%5Cbar%7Bx%7D%5E2%20%2B%20%5Csigma_%5Cbar%7By%7D%5E2%7D%7D" alt="\mp t_{1 - \frac{\alpha}{2}} = \frac{\bar{y} - \bar{x} - \Delta_{\pm}}{\sqrt{\sigma_\bar{x}^2 + \sigma_\bar{y}^2}}" title="\mp t_{1 - \frac{\alpha}{2}} = \frac{\bar{y} - \bar{x} - \Delta_{\pm}}{\sqrt{\sigma_\bar{x}^2 + \sigma_\bar{y}^2}}" class="math display"></p>
+<p>Re-arranging that gives the expected t-test confidence interval:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5CDelta_%7B%5Cpm%7D%20%3D%5Cbar%7By%7D%20-%20%5Cbar%7Bx%7D%20%5Cpm%20t_%7B1-%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%20%5Csqrt%7B%5Csigma_%5Cbar%7Bx%7D%5E2%20%2B%20%5Csigma_%5Cbar%7By%7D%5E2%7D" alt="\Delta_{\pm} =\bar{y} - \bar{x} \pm t_{1-\frac{\alpha}{2}} \sqrt{\sigma_\bar{x}^2 + \sigma_\bar{y}^2}" title="\Delta_{\pm} =\bar{y} - \bar{x} \pm t_{1-\frac{\alpha}{2}} \sqrt{\sigma_\bar{x}^2 + \sigma_\bar{y}^2}" class="math display"></p>
+</section>
+<section id="confidence-interval-for-the-relative-difference" class="level2">
+<h2 class="anchored" data-anchor-id="confidence-interval-for-the-relative-difference">Confidence interval for the relative difference</h2>
+<p>Now doing the same thing for the relative difference. We start with:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cmp%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%20%3D%20%5Cfrac%7B%5Cbar%7By%7D%20-%20%5Cdelta_%5Cpm%20%5Cbar%7Bx%7D%20%7D%7B%5Csqrt%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%5Cdelta_%5Cpm%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%7D%7D" alt="\mp t_{1 - \frac{\alpha}{2}} = \frac{\bar{y} - \delta_\pm \bar{x} }{\sqrt{\sigma_\bar{y}^2 + \delta_\pm^2 \sigma_\bar{x}^2}}" title="\mp t_{1 - \frac{\alpha}{2}} = \frac{\bar{y} - \delta_\pm \bar{x} }{\sqrt{\sigma_\bar{y}^2 + \delta_\pm^2 \sigma_\bar{x}^2}}" class="math display"></p>
+<p>This is slightly trickier to re-arrange, but I’ll give it a go:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cbegin%7Balign%7D%0At_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%20%26%3D%20%5Cfrac%7B%28%5Cbar%7By%7D%20-%20%5Cdelta_%5Cpm%20%5Cbar%7Bx%7D%29%5E2%7D%7B%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%5Cdelta_%5Cpm%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%7D%20%5Cnonumber%20%5C%5C%0A0%20%26%3D%20%28%5Cbar%7By%7D%20-%20%5Cdelta_%5Cpm%20%5Cbar%7Bx%7D%29%5E2%20-%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%20%5Cleft%28%20%5Csigma_%5Cbar%7By%7D%5E2%20%2B%20%5Cdelta_%5Cpm%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%20%5Cright%29%20%5Cnonumber%20%5C%5C%20%0A0%20%26%3D%20%5Cbar%7By%7D%5E2%20%2B%20%5Cdelta_%5Cpm%5E2%20%5Cbar%7Bx%7D%5E2%20-%202%20%5Cdelta_%5Cpm%20%5Cbar%7By%7D%20%5Cbar%7Bx%7D%20-%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%20%5Csigma_%5Cbar%7By%7D%5E2%20-%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%20%5Cdelta_%5Cpm%5E2%20%5Csigma_%5Cbar%7Bx%7D%5E2%20%5Cnonumber%20%5C%5C%20%0A0%20%26%3D%20%5Cdelta_%5Cpm%5E2%20%28%20%5Cbar%7Bx%7D%5E2%20-%20%5Csigma_%5Cbar%7Bx%7D%5E2%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%29%20-%202%20%5Cdelta_%5Cpm%20%5Cbar%7By%7D%20%5Cbar%7Bx%7D%20%2B%20%5Cbar%7By%7D%5E2%20-%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%20%5Csigma_%5Cbar%7By%7D%5E2%20%20%5Cnonumber%0A%5Cend%7Balign%7D" alt="\begin{align}
+t_{1 - \frac{\alpha}{2}}^2 &amp;= \frac{(\bar{y} - \delta_\pm \bar{x})^2}{\sigma_\bar{y}^2 + \delta_\pm^2 \sigma_\bar{x}^2} \nonumber \\
+0 &amp;= (\bar{y} - \delta_\pm \bar{x})^2 - t_{1 - \frac{\alpha}{2}}^2 \left( \sigma_\bar{y}^2 + \delta_\pm^2 \sigma_\bar{x}^2 \right) \nonumber \\ 
+0 &amp;= \bar{y}^2 + \delta_\pm^2 \bar{x}^2 - 2 \delta_\pm \bar{y} \bar{x} - t_{1 - \frac{\alpha}{2}}^2 \sigma_\bar{y}^2 - t_{1 - \frac{\alpha}{2}}^2 \delta_\pm^2 \sigma_\bar{x}^2 \nonumber \\ 
+0 &amp;= \delta_\pm^2 ( \bar{x}^2 - \sigma_\bar{x}^2 t_{1 - \frac{\alpha}{2}}^2) - 2 \delta_\pm \bar{y} \bar{x} + \bar{y}^2 - t_{1 - \frac{\alpha}{2}}^2 \sigma_\bar{y}^2  \nonumber
+\end{align}" title="\begin{align}
+t_{1 - \frac{\alpha}{2}}^2 &amp;= \frac{(\bar{y} - \delta_\pm \bar{x})^2}{\sigma_\bar{y}^2 + \delta_\pm^2 \sigma_\bar{x}^2} \nonumber \\
+0 &amp;= (\bar{y} - \delta_\pm \bar{x})^2 - t_{1 - \frac{\alpha}{2}}^2 \left( \sigma_\bar{y}^2 + \delta_\pm^2 \sigma_\bar{x}^2 \right) \nonumber \\ 
+0 &amp;= \bar{y}^2 + \delta_\pm^2 \bar{x}^2 - 2 \delta_\pm \bar{y} \bar{x} - t_{1 - \frac{\alpha}{2}}^2 \sigma_\bar{y}^2 - t_{1 - \frac{\alpha}{2}}^2 \delta_\pm^2 \sigma_\bar{x}^2 \nonumber \\ 
+0 &amp;= \delta_\pm^2 ( \bar{x}^2 - \sigma_\bar{x}^2 t_{1 - \frac{\alpha}{2}}^2) - 2 \delta_\pm \bar{y} \bar{x} + \bar{y}^2 - t_{1 - \frac{\alpha}{2}}^2 \sigma_\bar{y}^2  \nonumber
+\end{align}" class="math display"></p>
+<p>Now I can solve this quadratic equation, giving:</p>
+<p><img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Cdisplaystyle%20%5Cdelta_%5Cpm%20%3D%20%5Cfrac%7B%5Cbar%7By%7D%20%5Cbar%7Bx%7D%20%5Cpm%20%5Csqrt%7B%5Cbar%7By%7D%5E2%20%5Cbar%7Bx%7D%5E2%20-%20%28%20%5Cbar%7Bx%7D%5E2%20-%20%5Csigma_%5Cbar%7Bx%7D%5E2%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%29%20%28%5Cbar%7By%7D%5E2%20-%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%20%5Csigma_%5Cbar%7By%7D%5E2%29%7D%7D%7B%5Cbar%7Bx%7D%5E2%20-%20%5Csigma_%5Cbar%7Bx%7D%5E2%20t_%7B1%20-%20%5Cfrac%7B%5Calpha%7D%7B2%7D%7D%5E2%7D" alt="\delta_\pm = \frac{\bar{y} \bar{x} \pm \sqrt{\bar{y}^2 \bar{x}^2 - ( \bar{x}^2 - \sigma_\bar{x}^2 t_{1 - \frac{\alpha}{2}}^2) (\bar{y}^2 - t_{1 - \frac{\alpha}{2}}^2 \sigma_\bar{y}^2)}}{\bar{x}^2 - \sigma_\bar{x}^2 t_{1 - \frac{\alpha}{2}}^2}" title="\delta_\pm = \frac{\bar{y} \bar{x} \pm \sqrt{\bar{y}^2 \bar{x}^2 - ( \bar{x}^2 - \sigma_\bar{x}^2 t_{1 - \frac{\alpha}{2}}^2) (\bar{y}^2 - t_{1 - \frac{\alpha}{2}}^2 \sigma_\bar{y}^2)}}{\bar{x}^2 - \sigma_\bar{x}^2 t_{1 - \frac{\alpha}{2}}^2}" class="math display"></p>
+<p>This is the same as the confidence interval from Fieller’s method!</p>
+</section>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>This note explored the relationship between the t-test, the likelihood ratio test and Fieller’s confidence interval. I showed that Fieller’s confidence interval for a ratio metric can be derived via the likelihood ratio test, in the same way that Welch’s t-test arises for the absolute difference.</p>
+<p>These findings lead me to recommend the following approach when analysing A/B test results:</p>
+<ol type="1">
+<li>Use Welch’s t-test to calculate a p-value, and if the p-value &lt; <img style="vertical-align:middle" src="https://latex.codecogs.com/svg.latex?%5Ctextstyle%20%5Calpha" alt="\alpha" title="\alpha" class="math inline">, reject the null hypothesis that A and B are equal.</li>
+<li>When reporting on the absolute difference, use the standard t-test confidence interval.</li>
+<li>When reporting on the relative difference, use Fieller’s method to calculate the confidence interval.</li>
+</ol>
+<p>The nice thing about this approach is that all three results will always be aligned. If the p-value does not reject the null hypothesis, then both confidence intervals will include 0, while if the p-value does reject the null hypothesis then neither confidence interval will include 0.</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
@@ -294,10 +479,27 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   if (showAllCode) {
     showAllCode.addEventListener("click", toggleCodeHandler(true));
   }
-  function tippyHover(el, contentFn) {
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp("https:\/\/sambailey\.me");
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+          // target, if specified
+          link.setAttribute("target", "_blank");
+          if (link.getAttribute("rel") === null) {
+            link.setAttribute("rel", "noopener");
+          }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
     const config = {
       allowHTML: true,
-      content: contentFn,
       maxWidth: 500,
       delay: 100,
       arrow: false,
@@ -307,8 +509,17 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       interactive: true,
       interactiveBorder: 10,
       theme: 'quarto',
-      placement: 'bottom-start'
+      placement: 'bottom-start',
     };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
     window.tippy(el, config); 
   }
   const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
@@ -321,6 +532,125 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       const id = href.replace(/^#\/?/, "");
       const note = window.document.getElementById(id);
       return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
     });
   }
       let selectedAnnoteEl;
@@ -364,6 +694,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
             }
             div.style.top = top - 2 + "px";
             div.style.height = height + 4 + "px";
+            div.style.left = 0;
             let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
             if (gutterDiv === null) {
               gutterDiv = window.document.createElement("div");
@@ -389,6 +720,32 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
         });
         selectedAnnoteEl = undefined;
       };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
       // Attach click handler to the DT
       const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
       for (const annoteDlNode of annoteDls) {
@@ -446,20 +803,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       });
     }
   }
-    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var filterRegex = new RegExp("https:\/\/sambailey\.me");
-    var isInternal = (href) => {
-        return filterRegex.test(href) || localhostRegex.test(href);
-    }
-    // Inspect non-navigation links and adorn them if external
- 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item)');
-    for (var i=0; i<links.length; i++) {
-      const link = links[i];
-      if (!isInternal(link.href)) {
-          // target, if specified
-          link.setAttribute("target", "_blank");
-      }
-    }
 });
 </script>
 <script src="https://utteranc.es/client.js" repo="sam-bailey/blogComments" issue-term="pathname" theme="github-light" crossorigin="anonymous" async="">
@@ -470,12 +813,15 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     <div class="nav-footer-left">
       &nbsp;
     </div>   
-    <div class="nav-footer-center">Copyright 2023, Sam Bailey.<br>Views expressed are my own and do not reflect the views of my employer.</div>
+    <div class="nav-footer-center">
+<p>Copyright 2023, Sam Bailey.<br>Views expressed are my own and do not reflect the views of my employer.</p>
+</div>
     <div class="nav-footer-right">
       &nbsp;
     </div>
   </div>
 </footer>
+
 
 
 
