@@ -1,5 +1,5 @@
 ---
-title: "What's the best way to ratio metrics in A/B tests"
+title: "What is the point in stratified sampling?"
 date: "2023-06-25"
 categories: [Python]
 image: ../../_freeze/posts/models_vs_markets/index/figure-html/cell-2-output-1.png
