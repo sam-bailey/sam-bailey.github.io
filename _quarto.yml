@@ -11,7 +11,7 @@ website:
 
   repo-url: https://github.com/sam-bailey/sam-bailey.github.io
   repo-branch: master
-  site-url: https://sambailey.me
+  site-url: https://www.decisionsfromdata.blog
   search: false
   navbar:
     title: Sam Bailey | Data Science
